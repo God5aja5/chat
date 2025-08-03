@@ -408,26 +408,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const httpServer = createServer(app);
   
-  // WebSocket support for real-time features (optional)
-  const wss = new WebSocketServer({ server: httpServer });
-  
-  wss.on('connection', (ws) => {
-    console.log('WebSocket connection established');
+  // Only set up custom WebSocket in production to avoid conflicts with Vite's HMR WebSocket
+  if (process.env.NODE_ENV === "production") {
+    const wss = new WebSocketServer({ server: httpServer });
     
-    ws.on('message', (data) => {
-      try {
-        const message = JSON.parse(data.toString());
-        // Handle WebSocket messages if needed for real-time features
-        console.log('WebSocket message:', message);
-      } catch (error) {
-        console.error('WebSocket message error:', error);
-      }
+    wss.on('connection', (ws) => {
+      console.log('WebSocket connection established');
+      
+      ws.on('message', (data) => {
+        try {
+          const message = JSON.parse(data.toString());
+          // Handle WebSocket messages if needed for real-time features
+          console.log('WebSocket message:', message);
+        } catch (error) {
+          console.error('WebSocket message error:', error);
+        }
+      });
+      
+      ws.on('close', () => {
+        console.log('WebSocket connection closed');
+      });
     });
-    
-    ws.on('close', () => {
-      console.log('WebSocket connection closed');
-    });
-  });
+  }
 
   return httpServer;
 }
