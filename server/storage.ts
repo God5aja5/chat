@@ -13,6 +13,7 @@ import {
   adminUsers,
   modelCapabilities,
   databaseBackups,
+
   type User,
   type UpsertUser,
   type InsertChat,
@@ -41,6 +42,7 @@ import {
   type InsertModelCapability,
   type DatabaseBackup,
   type InsertDatabaseBackup,
+
   type ChatWithMessages,
   type MessageWithFiles,
   type UserWithSettings,
@@ -804,39 +806,8 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(redeemCodes).limit(100);
   }
 
-  async getAllSupportTickets(): Promise<SupportTicket[]> {
-    return await db.select().from(supportTickets).limit(100);
-  }
-
-  // Model capabilities management
-  async getModelCapabilities(): Promise<ModelCapability[]> {
-    return await db.select().from(modelCapabilities);
-  }
-
-  async updateModelCapability(modelName: string, updateData: any): Promise<ModelCapability> {
-    const [capability] = await db
-      .update(modelCapabilities)
-      .set(updateData)
-      .where(eq(modelCapabilities.modelName, modelName))
-      .returning();
-    return capability;
-  }
-
-  // Database backup management
-  async createDatabaseBackup(backupData: any): Promise<DatabaseBackup> {
-    const [backup] = await db
-      .insert(databaseBackups)
-      .values(backupData)
-      .returning();
-    return backup;
-  }
-
-  async getDatabaseBackups(): Promise<DatabaseBackup[]> {
-    return await db.select().from(databaseBackups).orderBy(desc(databaseBackups.createdAt));
-  }
-
-  async deleteDatabaseBackup(id: string): Promise<void> {
-    await db.delete(databaseBackups).where(eq(databaseBackups.id, id));
+  async getAllSupportTickets(): Promise<ContactMessage[]> {
+    return await db.select().from(contactMessages).limit(100);
   }
 
   // Enhanced redeem code generation
@@ -875,6 +846,14 @@ export class DatabaseStorage implements IStorage {
       result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return result;
+  }
+
+  private async getPlanByName(name: string): Promise<Plan | undefined> {
+    const [plan] = await db
+      .select()
+      .from(plans)
+      .where(eq(plans.name, name));
+    return plan;
   }
 }
 

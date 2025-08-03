@@ -89,6 +89,132 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Contact route
+  app.post('/api/contact', async (req, res) => {
+    try {
+      const contactData = req.body;
+      const message = await storage.createContactMessage({
+        ...contactData,
+        status: 'open',
+        priority: contactData.priority || 'medium',
+      });
+      res.json(message);
+    } catch (error) {
+      console.error("Error creating contact message:", error);
+      res.status(500).json({ error: "Failed to create contact message" });
+    }
+  });
+
+  // Model capabilities endpoints
+  app.get("/api/admin/model-capabilities", isAuthenticated, async (req, res) => {
+    try {
+      const capabilities = await storage.getModelCapabilities();
+      res.json(capabilities);
+    } catch (error) {
+      console.error("Error fetching model capabilities:", error);
+      res.status(500).json({ error: "Failed to fetch model capabilities" });
+    }
+  });
+
+  app.put("/api/admin/model-capabilities/:modelName", isAuthenticated, async (req, res) => {
+    try {
+      const { modelName } = req.params;
+      const updateData = req.body;
+      
+      const capability = await storage.updateModelCapability(modelName, updateData);
+      res.json(capability);
+    } catch (error) {
+      console.error("Error updating model capability:", error);
+      res.status(500).json({ error: "Failed to update model capability" });
+    }
+  });
+
+  // Database management endpoints
+  app.get("/api/admin/database/stats", isAuthenticated, async (req, res) => {
+    try {
+      const stats = {
+        totalTables: 15,
+        totalRows: 1250,
+        databaseSize: "45.2 MB",
+        lastBackup: new Date().toISOString()
+      };
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching database stats:", error);
+      res.status(500).json({ error: "Failed to fetch database stats" });
+    }
+  });
+
+  app.post("/api/admin/database/backup", isAuthenticated, async (req, res) => {
+    try {
+      const { type } = req.body;
+      const fileName = `backup_${type}_${new Date().toISOString().split('T')[0]}.sql`;
+      
+      const backup = await storage.createDatabaseBackup({
+        fileName,
+        fileSize: 1024 * 1024 * 10,
+        filePath: `/backups/${fileName}`,
+        backupType: type,
+      });
+      
+      res.json(backup);
+    } catch (error) {
+      console.error("Error creating database backup:", error);
+      res.status(500).json({ error: "Failed to create database backup" });
+    }
+  });
+
+  app.get("/api/admin/database/backups", isAuthenticated, async (req, res) => {
+    try {
+      const backups = await storage.getDatabaseBackups();
+      res.json(backups);
+    } catch (error) {
+      console.error("Error fetching database backups:", error);
+      res.status(500).json({ error: "Failed to fetch database backups" });
+    }
+  });
+
+  app.get("/api/admin/database/view", isAuthenticated, async (req, res) => {
+    try {
+      const sampleData = {
+        users: await storage.getAllUsers(),
+        chats: await storage.getAllChats(),
+        plans: await storage.getAllSubscriptions(),
+        subscriptions: await storage.getAllSubscriptions(),
+        redeemCodes: await storage.getAllRedeemCodes(),
+        supportTickets: await storage.getAllSupportTickets(),
+      };
+      res.json(sampleData);
+    } catch (error) {
+      console.error("Error fetching database view:", error);
+      res.status(500).json({ error: "Failed to fetch database view" });
+    }
+  });
+
+  app.delete("/api/admin/database/backup/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteDatabaseBackup(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting database backup:", error);
+      res.status(500).json({ error: "Failed to delete database backup" });
+    }
+  });
+
+  app.post("/api/admin/redeem-codes/generate", isAuthenticated, async (req, res) => {
+    try {
+      const { planName, duration, durationType, count } = req.body;
+      
+      const codes = await storage.generateRedeemCodes(planName, duration, durationType, count);
+      res.json(codes);
+    } catch (error) {
+      console.error("Error generating redeem codes:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to generate redeem codes";
+      res.status(500).json({ error: errorMessage });
+    }
+  });
+
   // User settings routes
   app.get('/api/user/settings', isAuthenticated, async (req: any, res) => {
     try {

@@ -1,193 +1,145 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { toast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import { generateTicketNumber } from "@/lib/utils";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from '@/hooks/use-toast';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation } from '@tanstack/react-query';
+import { z } from 'zod';
 import { 
   MessageSquare, 
   Send, 
-  Clock, 
   CheckCircle, 
-  AlertCircle,
-  HelpCircle,
-  Bug,
+  Bug, 
+  Lightbulb, 
   CreditCard,
-  Settings,
-  ArrowLeft
-} from "lucide-react";
+  AlertTriangle,
+  HelpCircle
+} from 'lucide-react';
+import { generateTicketNumber } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-interface ContactForm {
-  name: string;
-  email: string;
-  subject: string;
-  message: string;
-  category: string;
-  priority: string;
-}
 
-interface SubmittedTicket {
-  ticketNumber: string;
-  status: string;
-  estimatedResponse: string;
-}
+const contactFormSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.string().email('Please enter a valid email address'),
+  category: z.string().min(1, 'Please select a category'),
+  subject: z.string().min(5, 'Subject must be at least 5 characters'),
+  message: z.string().min(20, 'Message must be at least 20 characters'),
+  priority: z.enum(['low', 'medium', 'high']).default('medium'),
+});
 
-const categories = [
-  { value: "technical", label: "Technical Support", icon: Settings },
-  { value: "billing", label: "Billing & Payments", icon: CreditCard },
-  { value: "bug", label: "Bug Report", icon: Bug },
-  { value: "feature", label: "Feature Request", icon: HelpCircle },
-  { value: "general", label: "General Inquiry", icon: MessageSquare },
-];
+type ContactFormData = z.infer<typeof contactFormSchema>;
 
-const priorities = [
-  { value: "low", label: "Low - General question", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
-  { value: "medium", label: "Medium - Standard request", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" },
-  { value: "high", label: "High - Urgent issue", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300" },
-  { value: "urgent", label: "Urgent - Critical problem", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" },
+const CONTACT_CATEGORIES = [
+  { value: 'bug', label: 'Bug Report', icon: Bug, description: 'Report a technical issue' },
+  { value: 'feature', label: 'Feature Request', icon: Lightbulb, description: 'Suggest a new feature' },
+  { value: 'billing', label: 'Billing Support', icon: CreditCard, description: 'Questions about payments or subscriptions' },
+  { value: 'account', label: 'Account Issue', icon: AlertTriangle, description: 'Help with your account' },
+  { value: 'general', label: 'General Question', icon: HelpCircle, description: 'General inquiries' },
 ];
 
 export default function ContactPage() {
-  const [formData, setFormData] = useState<ContactForm>({
-    name: "",
-    email: "",
-    subject: "",
-    message: "",
-    category: "",
-    priority: "medium",
-  });
-  
-  const [submittedTicket, setSubmittedTicket] = useState<SubmittedTicket | null>(null);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [ticketNumber, setTicketNumber] = useState<string>('');
   const isMobile = useIsMobile();
 
-  const submitMutation = useMutation({
-    mutationFn: async (data: ContactForm) => {
-      const ticketNumber = generateTicketNumber();
-      const response = await apiRequest("/api/contact", {
-        method: "POST",
+  const form = useForm<ContactFormData>({
+    resolver: zodResolver(contactFormSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      category: '',
+      subject: '',
+      message: '',
+      priority: 'medium',
+    },
+  });
+
+  const contactMutation = useMutation({
+    mutationFn: async (data: ContactFormData) => {
+      const ticket = generateTicketNumber();
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           ...data,
-          ticketNumber,
+          ticketNumber: ticket,
         }),
       });
-      return { ...response, ticketNumber };
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      return { ...result, ticketNumber: ticket };
     },
     onSuccess: (data) => {
-      setSubmittedTicket({
-        ticketNumber: data.ticketNumber,
-        status: "open",
-        estimatedResponse: data.priority === "urgent" ? "1-2 hours" : 
-                          data.priority === "high" ? "4-6 hours" : 
-                          data.priority === "medium" ? "12-24 hours" : "2-3 days"
-      });
-      
-      // Reset form
-      setFormData({
-        name: "",
-        email: "",
-        subject: "",
-        message: "",
-        category: "",
-        priority: "medium",
-      });
-      
+      setTicketNumber(data.ticketNumber);
+      setIsSubmitted(true);
       toast({
-        title: "Support ticket created",
-        description: `Your ticket #${data.ticketNumber} has been submitted successfully`,
+        title: 'Message Sent Successfully',
+        description: `Your support ticket ${data.ticketNumber} has been created. We'll get back to you soon!`,
       });
+      form.reset();
     },
-    onError: (error: any) => {
+    onError: (error) => {
+      console.error('Contact form error:', error);
       toast({
-        title: "Failed to submit",
-        description: error.message || "Please try again later",
-        variant: "destructive",
+        title: 'Failed to Send Message',
+        description: 'Please try again or contact support directly.',
+        variant: 'destructive',
       });
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.name || !formData.email || !formData.subject || !formData.message || !formData.category) {
-      toast({
-        title: "Missing information",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    submitMutation.mutate(formData);
+  const onSubmit = (data: ContactFormData) => {
+    contactMutation.mutate(data);
   };
 
-  const handleInputChange = (field: keyof ContactForm, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleNewTicket = () => {
+    setIsSubmitted(false);
+    setTicketNumber('');
+    form.reset();
   };
 
-  const resetForm = () => {
-    setSubmittedTicket(null);
-  };
-
-  if (submittedTicket) {
+  if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
-        <Card className="w-full max-w-2xl">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+              <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
             </div>
-            <CardTitle className="text-2xl">Ticket Submitted Successfully!</CardTitle>
+            <CardTitle className="text-2xl">Message Sent!</CardTitle>
             <CardDescription>
-              We've received your support request and will get back to you soon
+              Your support ticket has been created successfully.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-lg p-4">
-              <h3 className="font-semibold text-green-800 dark:text-green-200 mb-2">
-                Ticket Details
-              </h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-green-700 dark:text-green-300">Ticket Number:</span>
-                  <span className="font-mono font-medium">#{submittedTicket.ticketNumber}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-green-700 dark:text-green-300">Status:</span>
-                  <Badge variant="default">Open</Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-green-700 dark:text-green-300">Estimated Response:</span>
-                  <span className="font-medium">{submittedTicket.estimatedResponse}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="text-center space-y-4">
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                <span>You'll receive email updates about your ticket status</span>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Button onClick={resetForm} variant="outline" className="w-full">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Submit Another Ticket
-                </Button>
-                <Button 
-                  onClick={() => window.location.href = "/"}
-                  className="w-full"
-                  data-testid="button-back-to-app"
-                >
-                  Back to App
-                </Button>
-              </div>
+          <CardContent className="text-center space-y-4">
+            <Alert>
+              <AlertDescription>
+                <strong>Ticket Number: {ticketNumber}</strong>
+                <br />
+                We've received your message and will respond within 24 hours.
+              </AlertDescription>
+            </Alert>
+            
+            <div className="space-y-3">
+              <Button onClick={handleNewTicket} className="w-full">
+                Submit Another Ticket
+              </Button>
+              <Button variant="outline" className="w-full" asChild>
+                <a href="/">Return to Chat</a>
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -196,218 +148,192 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-background p-4">
+      <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-            Contact Support
-          </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-400">
-            Submit a support ticket and we'll help you resolve any issues
+          <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+            <MessageSquare className="w-8 h-8 text-primary" />
+          </div>
+          <h1 className="text-3xl font-bold mb-2">Contact Support</h1>
+          <p className="text-muted-foreground">
+            We're here to help! Send us a message and we'll respond as soon as possible.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Contact Form */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5" />
-                  Create Support Ticket
-                </CardTitle>
-                <CardDescription>
-                  Fill out the form below and we'll get back to you as soon as possible
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* Personal Information */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="name">Full Name *</Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => handleInputChange("name", e.target.value)}
-                        placeholder="Enter your full name"
-                        required
-                        data-testid="input-contact-name"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="email">Email Address *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => handleInputChange("email", e.target.value)}
-                        placeholder="Enter your email"
-                        required
-                        data-testid="input-contact-email"
-                      />
-                    </div>
-                  </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Submit a Support Ticket</CardTitle>
+            <CardDescription>
+              Fill out the form below and we'll get back to you within 24 hours.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Full Name</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Your full name" 
+                            {...field} 
+                            data-testid="input-contact-name"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                  {/* Category and Priority */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="category">Category *</Label>
-                      <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
-                        <SelectTrigger data-testid="select-contact-category">
-                          <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email Address</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="email" 
+                            placeholder="your.email@example.com" 
+                            {...field} 
+                            data-testid="input-contact-email"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-contact-category">
+                            <SelectValue placeholder="Select a category" />
+                          </SelectTrigger>
+                        </FormControl>
                         <SelectContent>
-                          {categories.map((category) => {
+                          {CONTACT_CATEGORIES.map((category) => {
                             const IconComponent = category.icon;
                             return (
                               <SelectItem key={category.value} value={category.value}>
                                 <div className="flex items-center gap-2">
-                                  <IconComponent className="h-4 w-4" />
-                                  {category.label}
+                                  <IconComponent className="w-4 h-4" />
+                                  <div>
+                                    <div className="font-medium">{category.label}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {category.description}
+                                    </div>
+                                  </div>
                                 </div>
                               </SelectItem>
                             );
                           })}
                         </SelectContent>
                       </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="priority">Priority</Label>
-                      <Select value={formData.priority} onValueChange={(value) => handleInputChange("priority", value)}>
-                        <SelectTrigger data-testid="select-contact-priority">
-                          <SelectValue />
-                        </SelectTrigger>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="priority"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Priority</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-contact-priority">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
                         <SelectContent>
-                          {priorities.map((priority) => (
-                            <SelectItem key={priority.value} value={priority.value}>
-                              {priority.label}
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="low">Low - General inquiry</SelectItem>
+                          <SelectItem value="medium">Medium - Standard issue</SelectItem>
+                          <SelectItem value="high">High - Urgent problem</SelectItem>
                         </SelectContent>
                       </Select>
-                    </div>
-                  </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                  {/* Subject */}
-                  <div>
-                    <Label htmlFor="subject">Subject *</Label>
-                    <Input
-                      id="subject"
-                      value={formData.subject}
-                      onChange={(e) => handleInputChange("subject", e.target.value)}
-                      placeholder="Brief description of your issue"
-                      required
-                      data-testid="input-contact-subject"
-                    />
-                  </div>
+                <FormField
+                  control={form.control}
+                  name="subject"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Subject</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Brief description of your issue" 
+                          {...field} 
+                          data-testid="input-contact-subject"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                  {/* Message */}
-                  <div>
-                    <Label htmlFor="message">Message *</Label>
-                    <Textarea
-                      id="message"
-                      value={formData.message}
-                      onChange={(e) => handleInputChange("message", e.target.value)}
-                      placeholder="Please provide detailed information about your issue..."
-                      rows={6}
-                      required
-                      data-testid="textarea-contact-message"
-                    />
-                  </div>
+                <FormField
+                  control={form.control}
+                  name="message"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Message</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Please provide as much detail as possible about your issue or question..."
+                          className="min-h-[120px] resize-none"
+                          {...field}
+                          data-testid="textarea-contact-message"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                  {/* Submit Button */}
-                  <Button
-                    type="submit"
-                    disabled={submitMutation.isPending}
-                    className="w-full"
-                    data-testid="button-submit-ticket"
-                  >
-                    {submitMutation.isPending ? (
-                      <>Creating ticket...</>
-                    ) : (
-                      <>
-                        <Send className="h-4 w-4 mr-2" />
-                        Submit Support Ticket
-                      </>
-                    )}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={contactMutation.isPending}
+                  data-testid="button-submit-contact"
+                >
+                  {contactMutation.isPending ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Send Message
+                    </>
+                  )}
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
 
-          {/* Support Information */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Response Times</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {priorities.map((priority) => (
-                    <div key={priority.value} className="flex items-center justify-between">
-                      <Badge className={priority.color} variant="outline">
-                        {priority.value.charAt(0).toUpperCase() + priority.value.slice(1)}
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {priority.value === "urgent" ? "1-2 hours" :
-                         priority.value === "high" ? "4-6 hours" :
-                         priority.value === "medium" ? "12-24 hours" : "2-3 days"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>What to Include</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 text-sm">
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span>Detailed description of the issue</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span>Steps to reproduce the problem</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span>Error messages or screenshots</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span>Your account email address</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Alternative Options</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-sm">
-                  For immediate assistance, check our documentation or search existing solutions.
-                </p>
-                <div className="space-y-2">
-                  <Button variant="outline" size="sm" className="w-full justify-start">
-                    <HelpCircle className="h-4 w-4 mr-2" />
-                    Browse FAQ
-                  </Button>
-                  <Button variant="outline" size="sm" className="w-full justify-start">
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Community Forum
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        <div className="mt-8 text-center text-sm text-muted-foreground">
+          <p>
+            Need immediate help? Our support team typically responds within 24 hours.
+            <br />
+            For urgent issues, please include "URGENT" in your subject line.
+          </p>
         </div>
       </div>
     </div>
