@@ -532,9 +532,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createContactMessage(data: InsertContactMessage): Promise<ContactMessage> {
+    // Generate unique ticket number
+    const ticketNumber = `TKT-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    
     const [contactMessage] = await db
       .insert(contactMessages)
-      .values(data)
+      .values({
+        ...data,
+        ticketNumber,
+      })
       .returning();
     return contactMessage;
   }
@@ -556,6 +562,22 @@ export class DatabaseStorage implements IStorage {
 
   async deleteContactMessage(messageId: string): Promise<void> {
     await db.delete(contactMessages).where(eq(contactMessages.id, messageId));
+  }
+
+  async getContactMessageByTicket(ticketNumber: string): Promise<ContactMessage | undefined> {
+    const [message] = await db
+      .select()
+      .from(contactMessages)
+      .where(eq(contactMessages.ticketNumber, ticketNumber));
+    return message;
+  }
+
+  async getUserContactMessages(email: string): Promise<ContactMessage[]> {
+    return await db
+      .select()
+      .from(contactMessages)
+      .where(eq(contactMessages.email, email))
+      .orderBy(desc(contactMessages.createdAt));
   }
 
   // Usage tracking operations

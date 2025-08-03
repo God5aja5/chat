@@ -20,6 +20,10 @@ import {
   insertAdminUserSchema,
 } from "@shared/schema";
 import { z } from "zod";
+import { scrypt, timingSafeEqual } from "crypto";
+import { promisify } from "util";
+
+const scryptAsync = promisify(scrypt);
 
 // Configure multer for file uploads
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -555,13 +559,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const contactData = insertContactMessageSchema.parse(req.body);
       const message = await storage.createContactMessage(contactData);
-      res.json({ message: "Message sent successfully", id: message.id });
+      res.json({ 
+        message: "Support ticket created successfully",
+        ticketNumber: message.ticketNumber,
+        id: message.id 
+      });
     } catch (error) {
       console.error("Error creating contact message:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid contact data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  // Get user's tickets by email
+  app.get("/api/contact/tickets/:email", async (req, res) => {
+    try {
+      const { email } = req.params;
+      const tickets = await storage.getUserContactMessages(email);
+      res.json(tickets);
+    } catch (error) {
+      console.error("Get user tickets error:", error);
+      res.status(500).json({ message: "Failed to fetch tickets" });
+    }
+  });
+
+  // Get ticket by ticket number (for users to track their tickets)
+  app.get("/api/contact/ticket/:ticketNumber", async (req, res) => {
+    try {
+      const { ticketNumber } = req.params;
+      const ticket = await storage.getContactMessageByTicket(ticketNumber);
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+      res.json(ticket);
+    } catch (error) {
+      console.error("Get ticket error:", error);
+      res.status(500).json({ message: "Failed to fetch ticket" });
     }
   });
 
@@ -605,11 +640,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Simple password comparison (in real app, use proper hashing comparison)
-      const crypto = require("crypto");
       const [hashed, salt] = admin.password.split(".");
       const hashedBuf = Buffer.from(hashed, "hex");
-      const suppliedBuf = await crypto.scrypt(password, salt, 64);
-      const isValid = crypto.timingSafeEqual(hashedBuf, suppliedBuf);
+      const suppliedBuf = (await scryptAsync(password, salt, 64)) as Buffer;
+      const isValid = timingSafeEqual(hashedBuf, suppliedBuf);
 
       if (!isValid) {
         return res.status(401).json({ message: "Invalid credentials" });

@@ -1,55 +1,169 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { toast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { 
   Users, 
-  CreditCard, 
   MessageSquare, 
-  Gift, 
-  BarChart3, 
-  Shield,
+  Star, 
+  DollarSign, 
+  TrendingUp, 
+  Clock, 
+  CheckCircle, 
+  XCircle, 
+  AlertCircle,
+  MoreHorizontal,
+  Reply,
   Eye,
-  Trash2,
-  Send,
-  Copy,
-  Plus
+  LogOut,
+  Shield,
+  Smartphone,
+  Monitor
 } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
 
-interface AdminDashboard {
-  stats: {
-    totalPlans: number;
-    activeSubscriptions: number;
-    pendingMessages: number;
-    unusedCodes: number;
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  subscription?: {
+    status: string;
+    plan: {
+      name: string;
+      price: number;
+    };
+    expiresAt: string;
   };
-  plans: any[];
-  subscriptions: any[];
-  contactMessages: any[];
-  redeemCodes: any[];
+  usage?: {
+    chat: number;
+    image: number;
+  };
 }
 
+interface ContactMessage {
+  id: string;
+  ticketNumber: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  category: string;
+  priority: string;
+  status: string;
+  adminReply?: string;
+  createdAt: string;
+  updatedAt: string;
+  repliedAt?: string;
+}
+
+interface Plan {
+  id: string;
+  name: string;
+  price: number;
+  duration: string;
+  features: string[];
+  chatLimit?: number;
+  imageLimit?: number;
+  isActive: boolean;
+}
+
+interface Subscription {
+  id: string;
+  user: {
+    name: string;
+    email: string;
+  };
+  plan: {
+    name: string;
+    price: number;
+  };
+  status: string;
+  expiresAt: string;
+  createdAt: string;
+}
+
+interface RedeemCode {
+  id: string;
+  code: string;
+  plan: {
+    name: string;
+  };
+  duration: number;
+  isUsed: boolean;
+  usedBy?: {
+    name: string;
+    email: string;
+  };
+  usedAt?: string;
+  createdAt: string;
+  expiresAt?: string;
+}
+
+const statusColors = {
+  open: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
+  "in-progress": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
+  replied: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
+  closed: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300",
+};
+
+const priorityColors = {
+  low: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
+  medium: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
+  high: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300",
+  urgent: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
+};
+
 export default function AdminPage() {
-  const [adminAuth, setAdminAuth] = useState(false);
-  const [loginData, setLoginData] = useState({ username: "", password: "" });
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [credentials, setCredentials] = useState({ username: "", password: "" });
+  const [selectedTicket, setSelectedTicket] = useState<ContactMessage | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [ticketStatus, setTicketStatus] = useState("");
+  const [isMobile, setIsMobile] = useState(false);
+  
+  const queryClient = useQueryClient();
+
+  // Check for mobile screen
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+
+  // Check if admin is already authenticated
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/admin/check");
+        if (response.ok) {
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        console.log("Not authenticated");
+      }
+    };
+    checkAuth();
+  }, []);
 
   const loginMutation = useMutation({
-    mutationFn: async (credentials: { username: string; password: string }) => {
-      const res = await apiRequest("POST", "/api/admin/login", credentials);
-      return res.json();
+    mutationFn: async (creds: { username: string; password: string }) => {
+      const res = await apiRequest("POST", "/api/admin/login", creds);
+      return await res.json();
     },
     onSuccess: () => {
-      setAdminAuth(true);
+      setIsAuthenticated(true);
       toast({
         title: "Login successful",
         description: "Welcome to the admin panel",
@@ -64,461 +178,551 @@ export default function AdminPage() {
     },
   });
 
-  const { data: dashboardData, isLoading } = useQuery<AdminDashboard>({
-    queryKey: ["/api/admin/dashboard"],
-    enabled: adminAuth,
-  });
-
-  const createRedeemCodeMutation = useMutation({
-    mutationFn: async (data: { planId: string; duration: number; count: number }) => {
-      const res = await apiRequest("POST", "/api/admin/redeem-codes", data);
-      return res.json();
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/logout");
+      return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard"] });
+      setIsAuthenticated(false);
+      setCredentials({ username: "", password: "" });
       toast({
-        title: "Redeem codes created",
-        description: "New redeem codes have been generated successfully",
+        title: "Logged out",
+        description: "You have been logged out successfully",
       });
     },
   });
 
-  const replyToMessageMutation = useMutation({
-    mutationFn: async ({ messageId, reply }: { messageId: string; reply: string }) => {
+  const { data: stats } = useQuery({
+    queryKey: ["/api/admin/stats"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/stats");
+      return await res.json();
+    },
+    enabled: isAuthenticated,
+  });
+
+  const { data: users } = useQuery<User[]>({
+    queryKey: ["/api/admin/users"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/users");
+      return await res.json();
+    },
+    enabled: isAuthenticated,
+  });
+
+  const { data: contactMessages } = useQuery<ContactMessage[]>({
+    queryKey: ["/api/admin/contact"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/contact");
+      return await res.json();
+    },
+    enabled: isAuthenticated,
+  });
+
+  const { data: subscriptions } = useQuery<Subscription[]>({
+    queryKey: ["/api/admin/subscriptions"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/subscriptions");
+      return await res.json();
+    },
+    enabled: isAuthenticated,
+  });
+
+  const { data: redeemCodes } = useQuery<RedeemCode[]>({
+    queryKey: ["/api/admin/redeem-codes"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/redeem-codes");
+      return await res.json();
+    },
+    enabled: isAuthenticated,
+  });
+
+  const replyMutation = useMutation({
+    mutationFn: async ({ messageId, status, adminReply }: { messageId: string; status: string; adminReply: string }) => {
       const res = await apiRequest("PUT", `/api/admin/contact/${messageId}`, {
-        adminReply: reply,
-        status: "replied",
+        status,
+        adminReply,
       });
-      return res.json();
+      return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/contact"] });
+      setSelectedTicket(null);
+      setReplyText("");
+      setTicketStatus("");
       toast({
         title: "Reply sent",
-        description: "Your reply has been recorded",
+        description: "Your reply has been sent to the user",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to send reply",
+        description: error.message,
+        variant: "destructive",
       });
     },
   });
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    loginMutation.mutate(loginData);
+  const handleLogin = () => {
+    if (credentials.username && credentials.password) {
+      loginMutation.mutate(credentials);
+    }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: "Copied to clipboard",
-      description: "Code has been copied to your clipboard",
-    });
+  const handleLogout = () => {
+    logoutMutation.mutate();
   };
 
-  if (!adminAuth) {
+  const handleReply = () => {
+    if (selectedTicket && replyText && ticketStatus) {
+      replyMutation.mutate({
+        messageId: selectedTicket.id,
+        status: ticketStatus,
+        adminReply: replyText,
+      });
+    }
+  };
+
+  const openTicket = (ticket: ContactMessage) => {
+    setSelectedTicket(ticket);
+    setReplyText(ticket.adminReply || "");
+    setTicketStatus(ticket.status);
+  };
+
+  if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <Shield className="h-12 w-12 mx-auto mb-4 text-blue-600" />
+            <div className="flex items-center justify-center mb-4">
+              <Shield className="h-8 w-8 text-blue-600" />
+            </div>
             <CardTitle className="text-2xl">Admin Login</CardTitle>
             <CardDescription>
-              Enter your administrator credentials to access the admin panel
+              Enter your admin credentials to access the dashboard
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
+            <div className="space-y-4">
+              <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
                 <Input
                   id="username"
-                  value={loginData.username}
-                  onChange={(e) => setLoginData(prev => ({ ...prev, username: e.target.value }))}
-                  placeholder="Enter username"
-                  required
                   data-testid="input-admin-username"
+                  value={credentials.username}
+                  onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
+                  placeholder="Enter admin username"
                 />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
                   type="password"
-                  value={loginData.password}
-                  onChange={(e) => setLoginData(prev => ({ ...prev, password: e.target.value }))}
-                  placeholder="Enter password"
-                  required
                   data-testid="input-admin-password"
+                  value={credentials.password}
+                  onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
+                  placeholder="Enter admin password"
+                  onKeyPress={(e) => e.key === "Enter" && handleLogin()}
                 />
               </div>
               <Button
-                type="submit"
-                className="w-full"
+                onClick={handleLogin}
                 disabled={loginMutation.isPending}
+                className="w-full"
                 data-testid="button-admin-login"
               >
-                {loginMutation.isPending ? "Signing in..." : "Sign In"}
+                {loginMutation.isPending ? "Logging in..." : "Login"}
               </Button>
-            </form>
+            </div>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
-          <p className="text-gray-600 dark:text-gray-300">Manage your ChatGPT clone platform</p>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Header */}
+      <div className="bg-white dark:bg-gray-800 shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <Shield className="h-8 w-8 text-blue-600 mr-3" />
+              <div>
+                <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Admin Dashboard
+                </h1>
+                <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                  {isMobile ? <Smartphone className="h-4 w-4 mr-1" /> : <Monitor className="h-4 w-4 mr-1" />}
+                  {isMobile ? "Mobile View" : "Desktop View"}
+                </div>
+              </div>
+            </div>
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              size="sm"
+              data-testid="button-admin-logout"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <Users className="h-8 w-8 text-blue-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Users</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {stats?.totalUsers || 0}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <MessageSquare className="h-8 w-8 text-green-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Open Tickets</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {stats?.openTickets || 0}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <Star className="h-8 w-8 text-yellow-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Premium Users</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {stats?.premiumUsers || 0}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <DollarSign className="h-8 w-8 text-purple-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Monthly Revenue</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    ${stats?.monthlyRevenue || 0}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="dashboard" data-testid="tab-dashboard">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Dashboard
+        {/* Main Tabs */}
+        <Tabs defaultValue="tickets" className="w-full">
+          <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2' : 'grid-cols-4'} mb-6`}>
+            <TabsTrigger value="tickets" data-testid="tab-tickets">
+              {isMobile ? <MessageSquare className="h-4 w-4" /> : 
+              <><MessageSquare className="h-4 w-4 mr-2" />Support Tickets</>}
             </TabsTrigger>
-            <TabsTrigger value="subscriptions" data-testid="tab-subscriptions">
-              <CreditCard className="h-4 w-4 mr-2" />
-              Subscriptions
+            <TabsTrigger value="users" data-testid="tab-users">
+              {isMobile ? <Users className="h-4 w-4" /> : 
+              <><Users className="h-4 w-4 mr-2" />Users</>}
             </TabsTrigger>
-            <TabsTrigger value="messages" data-testid="tab-messages">
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Messages
-            </TabsTrigger>
-            <TabsTrigger value="codes" data-testid="tab-codes">
-              <Gift className="h-4 w-4 mr-2" />
-              Redeem Codes
-            </TabsTrigger>
+            {!isMobile && (
+              <>
+                <TabsTrigger value="subscriptions" data-testid="tab-subscriptions">
+                  <Star className="h-4 w-4 mr-2" />
+                  Subscriptions
+                </TabsTrigger>
+                <TabsTrigger value="codes" data-testid="tab-codes">
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  Redeem Codes
+                </TabsTrigger>
+              </>
+            )}
           </TabsList>
 
-          {/* Dashboard Overview */}
-          <TabsContent value="dashboard" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Plans</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="stat-total-plans">
-                    {dashboardData?.stats.totalPlans || 0}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Active Subscriptions</CardTitle>
-                  <CreditCard className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="stat-active-subscriptions">
-                    {dashboardData?.stats.activeSubscriptions || 0}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pending Messages</CardTitle>
-                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="stat-pending-messages">
-                    {dashboardData?.stats.pendingMessages || 0}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Unused Codes</CardTitle>
-                  <Gift className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="stat-unused-codes">
-                    {dashboardData?.stats.unusedCodes || 0}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Available Plans</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {dashboardData?.plans.map((plan) => (
-                      <div key={plan.id} className="flex justify-between items-center p-2 border rounded">
-                        <div>
-                          <p className="font-medium">{plan.name}</p>
-                          <p className="text-sm text-gray-600">${(plan.price / 100).toFixed(0)}/month</p>
-                        </div>
-                        <Badge variant={plan.isActive ? "default" : "secondary"}>
-                          {plan.isActive ? "Active" : "Inactive"}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm">
-                    <p>• {dashboardData?.stats.activeSubscriptions} active subscriptions</p>
-                    <p>• {dashboardData?.stats.pendingMessages} unread messages</p>
-                    <p>• {dashboardData?.stats.unusedCodes} unused redeem codes</p>
-                    <p>• Platform running smoothly</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* Subscriptions Tab */}
-          <TabsContent value="subscriptions" className="space-y-6">
+          {/* Support Tickets Tab */}
+          <TabsContent value="tickets">
             <Card>
               <CardHeader>
-                <CardTitle>Active Subscriptions</CardTitle>
+                <CardTitle>Support Tickets</CardTitle>
                 <CardDescription>
-                  Recent subscription activity and user management
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>User Email</TableHead>
-                      <TableHead>Plan</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Expires</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {dashboardData?.subscriptions.map((sub) => (
-                      <TableRow key={sub.id}>
-                        <TableCell data-testid={`subscription-email-${sub.id}`}>
-                          {sub.user?.email || 'N/A'}
-                        </TableCell>
-                        <TableCell>{sub.plan?.name}</TableCell>
-                        <TableCell>${(sub.plan?.price / 100).toFixed(0)}</TableCell>
-                        <TableCell>
-                          <Badge variant={sub.status === "active" ? "default" : "secondary"}>
-                            {sub.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {new Date(sub.expiresAt).toLocaleDateString()}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Contact Messages Tab */}
-          <TabsContent value="messages" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Contact Messages</CardTitle>
-                <CardDescription>
-                  Customer support requests and inquiries
+                  Manage customer support tickets and replies
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {dashboardData?.contactMessages.map((message) => (
-                    <Card key={message.id} className="p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h4 className="font-medium" data-testid={`message-subject-${message.id}`}>
-                            {message.subject}
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            From: {message.name} ({message.email})
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {new Date(message.createdAt).toLocaleString()}
-                          </p>
+                  {contactMessages?.map((ticket) => (
+                    <div
+                      key={ticket.id}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                      onClick={() => openTicket(ticket)}
+                      data-testid={`ticket-${ticket.id}`}
+                    >
+                      <div className="flex-1 space-y-2 sm:space-y-0">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                          <h3 className="font-medium text-gray-900 dark:text-white">
+                            {ticket.subject}
+                          </h3>
+                          <div className="flex gap-2">
+                            <Badge className={statusColors[ticket.status as keyof typeof statusColors]}>
+                              {ticket.status}
+                            </Badge>
+                            <Badge className={priorityColors[ticket.priority as keyof typeof priorityColors]}>
+                              {ticket.priority}
+                            </Badge>
+                          </div>
                         </div>
-                        <Badge variant={message.status === "unread" ? "destructive" : "default"}>
-                          {message.status}
-                        </Badge>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          <p>#{ticket.ticketNumber} • {ticket.name} • {ticket.email}</p>
+                          <p className="truncate max-w-md">{ticket.message}</p>
+                        </div>
                       </div>
-                      <p className="text-sm mb-3">{message.message}</p>
-                      
-                      {message.adminReply && (
-                        <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded mb-3">
-                          <p className="text-sm"><strong>Admin Reply:</strong></p>
-                          <p className="text-sm">{message.adminReply}</p>
-                        </div>
-                      )}
-                      
-                      {message.status === "unread" && (
-                        <div className="flex gap-2">
-                          <Textarea
-                            placeholder="Type your reply..."
-                            id={`reply-${message.id}`}
-                            className="flex-1"
-                            data-testid={`textarea-reply-${message.id}`}
-                          />
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              const reply = (document.getElementById(`reply-${message.id}`) as HTMLTextAreaElement)?.value;
-                              if (reply) {
-                                replyToMessageMutation.mutate({ messageId: message.id, reply });
-                              }
-                            }}
-                            data-testid={`button-reply-${message.id}`}
-                          >
-                            <Send className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </Card>
+                      <div className="flex items-center gap-2 mt-2 sm:mt-0">
+                        <span className="text-xs text-gray-500">
+                          {new Date(ticket.createdAt).toLocaleDateString()}
+                        </span>
+                        <Button size="sm" variant="outline">
+                          <Reply className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Redeem Codes Tab */}
-          <TabsContent value="codes" className="space-y-6">
+          {/* Users Tab */}
+          <TabsContent value="users">
             <Card>
               <CardHeader>
-                <CardTitle>Generate Redeem Codes</CardTitle>
+                <CardTitle>User Management</CardTitle>
                 <CardDescription>
-                  Create new redeem codes for premium plans
+                  View and manage user accounts and subscriptions
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const formData = new FormData(e.target as HTMLFormElement);
-                    createRedeemCodeMutation.mutate({
-                      planId: formData.get("planId") as string,
-                      duration: parseInt(formData.get("duration") as string),
-                      count: parseInt(formData.get("count") as string),
-                    });
-                  }}
-                  className="grid md:grid-cols-4 gap-4"
-                >
-                  <div>
-                    <Label htmlFor="planId">Plan</Label>
-                    <Select name="planId" required>
-                      <SelectTrigger data-testid="select-plan">
-                        <SelectValue placeholder="Select plan" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {dashboardData?.plans.map((plan) => (
-                          <SelectItem key={plan.id} value={plan.id}>
-                            {plan.name} - ${(plan.price / 100).toFixed(0)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="duration">Duration (days)</Label>
-                    <Input
-                      name="duration"
-                      type="number"
-                      defaultValue="30"
-                      min="1"
-                      max="365"
-                      required
-                      data-testid="input-duration"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="count">Count</Label>
-                    <Input
-                      name="count"
-                      type="number"
-                      defaultValue="1"
-                      min="1"
-                      max="100"
-                      required
-                      data-testid="input-count"
-                    />
-                  </div>
-                  <div className="flex items-end">
-                    <Button type="submit" data-testid="button-generate-codes">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Generate
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Unused Redeem Codes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Code</TableHead>
-                      <TableHead>Plan</TableHead>
-                      <TableHead>Duration</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {dashboardData?.redeemCodes.map((code) => (
-                      <TableRow key={code.id}>
-                        <TableCell>
-                          <code className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded" data-testid={`code-${code.id}`}>
-                            {code.code}
-                          </code>
-                        </TableCell>
-                        <TableCell>{code.plan?.name}</TableCell>
-                        <TableCell>{code.duration} days</TableCell>
-                        <TableCell>
-                          {new Date(code.createdAt).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => copyToClipboard(code.code)}
-                            data-testid={`button-copy-${code.id}`}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2">User</th>
+                        <th className="text-left p-2">Plan</th>
+                        <th className="text-left p-2">Usage</th>
+                        <th className="text-left p-2">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users?.map((user) => (
+                        <tr key={user.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
+                          <td className="p-2">
+                            <div>
+                              <p className="font-medium">{user.name}</p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">{user.email}</p>
+                            </div>
+                          </td>
+                          <td className="p-2">
+                            {user.subscription ? (
+                              <div>
+                                <p className="font-medium">{user.subscription.plan.name}</p>
+                                <p className="text-sm text-gray-600">${user.subscription.plan.price}/month</p>
+                              </div>
+                            ) : (
+                              <span className="text-gray-500">Free</span>
+                            )}
+                          </td>
+                          <td className="p-2">
+                            <div className="text-sm">
+                              <p>Chat: {user.usage?.chat || 0}</p>
+                              <p>Images: {user.usage?.image || 0}</p>
+                            </div>
+                          </td>
+                          <td className="p-2">
+                            <Badge variant={user.subscription?.status === "active" ? "default" : "secondary"}>
+                              {user.subscription?.status || "free"}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Desktop-only tabs */}
+          {!isMobile && (
+            <>
+              <TabsContent value="subscriptions">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Subscriptions</CardTitle>
+                    <CardDescription>
+                      Monitor active premium subscriptions
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {subscriptions?.map((sub) => (
+                        <div key={sub.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div>
+                            <p className="font-medium">{sub.user.name}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{sub.user.email}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              {sub.plan.name} - ${sub.plan.price}/month
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <Badge variant={sub.status === "active" ? "default" : "secondary"}>
+                              {sub.status}
+                            </Badge>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              Expires: {new Date(sub.expiresAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="codes">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Redeem Codes</CardTitle>
+                    <CardDescription>
+                      Manage promotional and redeem codes
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {redeemCodes?.map((code) => (
+                        <div key={code.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div>
+                            <p className="font-mono font-medium">{code.code}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              {code.plan.name} - {code.duration} days
+                            </p>
+                            {code.isUsed && code.usedBy && (
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                Used by: {code.usedBy.name} ({code.usedBy.email})
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <Badge variant={code.isUsed ? "secondary" : "default"}>
+                              {code.isUsed ? "Used" : "Available"}
+                            </Badge>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              Created: {new Date(code.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </>
+          )}
         </Tabs>
       </div>
+
+      {/* Ticket Reply Dialog */}
+      <Dialog open={!!selectedTicket} onOpenChange={() => setSelectedTicket(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Reply to Support Ticket</DialogTitle>
+            <DialogDescription>
+              Ticket #{selectedTicket?.ticketNumber} - {selectedTicket?.subject}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedTicket && (
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <h4 className="font-medium mb-2">Customer Message:</h4>
+                <p className="text-sm">{selectedTicket.message}</p>
+                <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                  From: {selectedTicket.name} ({selectedTicket.email})
+                  <br />
+                  Category: {selectedTicket.category}
+                  <br />
+                  Priority: {selectedTicket.priority}
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="status">Ticket Status</Label>
+                <Select value={ticketStatus} onValueChange={setTicketStatus}>
+                  <SelectTrigger data-testid="select-ticket-status">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">Open</SelectItem>
+                    <SelectItem value="in-progress">In Progress</SelectItem>
+                    <SelectItem value="replied">Replied</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="reply">Admin Reply</Label>
+                <Textarea
+                  id="reply"
+                  data-testid="textarea-admin-reply"
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  placeholder="Type your reply to the customer..."
+                  rows={6}
+                />
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-2 pt-4">
+                <Button
+                  onClick={handleReply}
+                  disabled={replyMutation.isPending || !replyText || !ticketStatus}
+                  className="flex-1"
+                  data-testid="button-send-reply"
+                >
+                  {replyMutation.isPending ? "Sending..." : "Send Reply"}
+                </Button>
+                <Button
+                  onClick={() => setSelectedTicket(null)}
+                  variant="outline"
+                  className="flex-1"
+                  data-testid="button-cancel-reply"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

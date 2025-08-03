@@ -144,13 +144,18 @@ export const redeemCodes = pgTable("redeem_codes", {
 // Contact Messages
 export const contactMessages = pgTable("contact_messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketNumber: varchar("ticket_number").notNull().unique(),
   name: varchar("name").notNull(),
   email: varchar("email").notNull(),
   subject: varchar("subject").notNull(),
   message: text("message").notNull(),
-  status: varchar("status").default("unread"), // "unread" | "read" | "replied"
+  category: varchar("category").notNull().default("general-inquiry"),
+  priority: varchar("priority").default("medium"), // "low" | "medium" | "high" | "urgent"
+  status: varchar("status").default("open"), // "open" | "in-progress" | "replied" | "closed"
   adminReply: text("admin_reply"),
+  userId: varchar("user_id"), // Optional - for logged in users
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
   repliedAt: timestamp("replied_at"),
 });
 

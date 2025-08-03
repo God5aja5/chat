@@ -1,287 +1,428 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Phone, MapPin, Send, CheckCircle } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { z } from "zod";
+import { MessageSquare, Clock, CheckCircle, XCircle, Search, Send, AlertCircle } from "lucide-react";
 
 const contactSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Please enter a valid email"),
+  email: z.string().email("Please enter a valid email address"),
   subject: z.string().min(5, "Subject must be at least 5 characters"),
   message: z.string().min(10, "Message must be at least 10 characters"),
+  category: z.string().min(1, "Please select a category"),
 });
 
+type ContactFormData = z.infer<typeof contactSchema>;
+
+interface ContactMessage {
+  id: string;
+  ticketNumber: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  category: string;
+  priority: string;
+  status: string;
+  adminReply?: string;
+  createdAt: string;
+  updatedAt: string;
+  repliedAt?: string;
+}
+
+const categories = [
+  { value: "general-inquiry", label: "General Inquiry" },
+  { value: "technical-support", label: "Technical Support" },
+  { value: "billing", label: "Billing & Subscriptions" },
+  { value: "feature-request", label: "Feature Request" },
+  { value: "bug-report", label: "Bug Report" },
+  { value: "account-issue", label: "Account Issue" },
+  { value: "other", label: "Other" },
+];
+
+const statusColors = {
+  open: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
+  "in-progress": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
+  replied: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
+  closed: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300",
+};
+
 export default function ContactPage() {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    subject: "",
-    message: "",
+  const [trackingEmail, setTrackingEmail] = useState("");
+  const [trackingTicket, setTrackingTicket] = useState("");
+  const [activeTab, setActiveTab] = useState("contact");
+
+  const form = useForm<ContactFormData>({
+    resolver: zodResolver(contactSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      subject: "",
+      message: "",
+      category: "",
+    },
   });
-  const [submitted, setSubmitted] = useState(false);
 
   const contactMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
-      const validated = contactSchema.parse(data);
-      const res = await apiRequest("POST", "/api/contact", validated);
-      return res.json();
+    mutationFn: async (data: ContactFormData) => {
+      const res = await apiRequest("POST", "/api/contact", data);
+      return await res.json();
     },
-    onSuccess: () => {
-      setSubmitted(true);
+    onSuccess: (data) => {
       toast({
-        title: "Message sent successfully!",
-        description: "We'll get back to you within 24 hours.",
+        title: "Ticket Created Successfully!",
+        description: `Your support ticket ${data.ticketNumber} has been created. We'll get back to you soon.`,
       });
+      form.reset();
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to send message",
+        title: "Failed to create ticket",
         description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    contactMutation.mutate(formData);
+  const { data: userTickets, refetch: refetchUserTickets } = useQuery<ContactMessage[]>({
+    queryKey: ["/api/contact/tickets", trackingEmail],
+    queryFn: async () => {
+      if (!trackingEmail) return [];
+      const res = await apiRequest("GET", `/api/contact/tickets/${trackingEmail}`);
+      return await res.json();
+    },
+    enabled: !!trackingEmail,
+  });
+
+  const { data: singleTicket, refetch: refetchSingleTicket } = useQuery<ContactMessage>({
+    queryKey: ["/api/contact/ticket", trackingTicket],
+    queryFn: async () => {
+      if (!trackingTicket) return null;
+      const res = await apiRequest("GET", `/api/contact/ticket/${trackingTicket}`);
+      return await res.json();
+    },
+    enabled: !!trackingTicket,
+  });
+
+  const onSubmit = (data: ContactFormData) => {
+    contactMutation.mutate(data);
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleTrackByEmail = () => {
+    if (trackingEmail) {
+      refetchUserTickets();
+    }
   };
 
-  if (submitted) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 py-12 px-4">
-        <div className="max-w-2xl mx-auto text-center">
-          <div className="mb-8">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-              Message Sent Successfully!
-            </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300">
-              Thank you for contacting us. We've received your message and will respond within 24 hours.
-            </p>
-          </div>
-          <Button onClick={() => setSubmitted(false)} data-testid="button-send-another">
-            Send Another Message
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  const handleTrackByTicket = () => {
+    if (trackingTicket) {
+      refetchSingleTicket();
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 py-12 px-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            Get in Touch
-          </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-            Have questions about our AI chat platform? Need technical support or want to share feedback? 
-            We're here to help and would love to hear from you.
-          </p>
-        </div>
-
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Contact Information */}
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle>Contact Information</CardTitle>
-                <CardDescription>
-                  Multiple ways to reach our support team
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-start space-x-3">
-                  <Mail className="h-5 w-5 text-blue-600 mt-1" />
-                  <div>
-                    <p className="font-medium">Email Support</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">support@chatgpt-clone.com</p>
-                    <p className="text-xs text-gray-500">Response within 24 hours</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start space-x-3">
-                  <Phone className="h-5 w-5 text-blue-600 mt-1" />
-                  <div>
-                    <p className="font-medium">Phone Support</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">+1 (555) 123-4567</p>
-                    <p className="text-xs text-gray-500">Mon-Fri, 9 AM - 6 PM PST</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start space-x-3">
-                  <MapPin className="h-5 w-5 text-blue-600 mt-1" />
-                  <div>
-                    <p className="font-medium">Office Address</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      123 AI Street<br />
-                      San Francisco, CA 94105<br />
-                      United States
-                    </p>
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t">
-                  <h4 className="font-medium mb-2">Support Categories</h4>
-                  <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
-                    <li>• Technical Issues</li>
-                    <li>• Account & Billing</li>
-                    <li>• Feature Requests</li>
-                    <li>• API Integration</li>
-                    <li>• General Questions</li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Contact Form */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Send us a Message</CardTitle>
-                <CardDescription>
-                  Fill out the form below and we'll respond as soon as possible
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="name">Full Name *</Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => handleInputChange("name", e.target.value)}
-                        placeholder="Enter your full name"
-                        required
-                        data-testid="input-name"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="email">Email Address *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => handleInputChange("email", e.target.value)}
-                        placeholder="Enter your email"
-                        required
-                        data-testid="input-email"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="subject">Subject *</Label>
-                    <Select onValueChange={(value) => handleInputChange("subject", value)}>
-                      <SelectTrigger data-testid="select-subject">
-                        <SelectValue placeholder="Select a subject" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="technical-support">Technical Support</SelectItem>
-                        <SelectItem value="billing-account">Billing & Account</SelectItem>
-                        <SelectItem value="feature-request">Feature Request</SelectItem>
-                        <SelectItem value="api-integration">API Integration</SelectItem>
-                        <SelectItem value="bug-report">Bug Report</SelectItem>
-                        <SelectItem value="general-inquiry">General Inquiry</SelectItem>
-                        <SelectItem value="partnership">Partnership</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="message">Message *</Label>
-                    <Textarea
-                      id="message"
-                      value={formData.message}
-                      onChange={(e) => handleInputChange("message", e.target.value)}
-                      placeholder="Describe your question or issue in detail..."
-                      rows={6}
-                      required
-                      data-testid="textarea-message"
-                    />
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={contactMutation.isPending}
-                    data-testid="button-submit-contact"
-                  >
-                    {contactMutation.isPending ? (
-                      <div className="flex items-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Sending...
-                      </div>
-                    ) : (
-                      <div className="flex items-center">
-                        <Send className="h-4 w-4 mr-2" />
-                        Send Message
-                      </div>
-                    )}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* FAQ Section */}
-        <div className="mt-16">
-          <h2 className="text-2xl font-bold text-center mb-8">Common Questions</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">How fast is support?</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  We typically respond to support requests within 2-4 hours during business hours, 
-                  and within 24 hours for non-urgent matters.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Is there phone support?</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Yes! Premium and Pro subscribers get access to phone support during business hours. 
-                  Free users can reach us via email.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Can I request features?</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Absolutely! We love hearing from our users. Send us your feature ideas and 
-                  we'll consider them for future updates.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold mb-2">Contact Support</h1>
+        <p className="text-muted-foreground">
+          Get help with your account, report issues, or send us feedback
+        </p>
       </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="contact" data-testid="tab-contact">
+            <Send className="h-4 w-4 mr-2" />
+            Create Ticket
+          </TabsTrigger>
+          <TabsTrigger value="track" data-testid="tab-track">
+            <Search className="h-4 w-4 mr-2" />
+            Track Tickets
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="contact">
+          <Card>
+            <CardHeader>
+              <CardTitle>Create Support Ticket</CardTitle>
+              <CardDescription>
+                Fill out the form below and we'll get back to you as soon as possible
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Full Name</Label>
+                    <Input
+                      id="name"
+                      data-testid="input-name"
+                      {...form.register("name")}
+                      placeholder="Enter your full name"
+                    />
+                    {form.formState.errors.name && (
+                      <p className="text-sm text-red-500">{form.formState.errors.name.message}</p>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email Address</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      data-testid="input-email"
+                      {...form.register("email")}
+                      placeholder="Enter your email address"
+                    />
+                    {form.formState.errors.email && (
+                      <p className="text-sm text-red-500">{form.formState.errors.email.message}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="category">Category</Label>
+                  <Select onValueChange={(value) => form.setValue("category", value)}>
+                    <SelectTrigger data-testid="select-category">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category.value} value={category.value}>
+                          {category.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {form.formState.errors.category && (
+                    <p className="text-sm text-red-500">{form.formState.errors.category.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="subject">Subject</Label>
+                  <Input
+                    id="subject"
+                    data-testid="input-subject"
+                    {...form.register("subject")}
+                    placeholder="Brief description of your issue"
+                  />
+                  {form.formState.errors.subject && (
+                    <p className="text-sm text-red-500">{form.formState.errors.subject.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="message">Message</Label>
+                  <Textarea
+                    id="message"
+                    data-testid="textarea-message"
+                    {...form.register("message")}
+                    placeholder="Please provide as much detail as possible about your issue or question"
+                    rows={6}
+                  />
+                  {form.formState.errors.message && (
+                    <p className="text-sm text-red-500">{form.formState.errors.message.message}</p>
+                  )}
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={contactMutation.isPending}
+                  data-testid="button-submit-ticket"
+                >
+                  {contactMutation.isPending ? "Creating Ticket..." : "Create Support Ticket"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="track">
+          <div className="space-y-6">
+            {/* Track by Email */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Track All Your Tickets</CardTitle>
+                <CardDescription>
+                  Enter your email address to see all support tickets you've created
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-3">
+                  <Input
+                    placeholder="Enter your email address"
+                    value={trackingEmail}
+                    onChange={(e) => setTrackingEmail(e.target.value)}
+                    data-testid="input-tracking-email"
+                  />
+                  <Button onClick={handleTrackByEmail} data-testid="button-track-by-email">
+                    <Search className="h-4 w-4 mr-2" />
+                    Search
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Track by Ticket Number */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Track Specific Ticket</CardTitle>
+                <CardDescription>
+                  Enter your ticket number to check the status of a specific support request
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-3">
+                  <Input
+                    placeholder="Enter ticket number (e.g., TKT-1234567890-ABC123)"
+                    value={trackingTicket}
+                    onChange={(e) => setTrackingTicket(e.target.value)}
+                    data-testid="input-tracking-ticket"
+                  />
+                  <Button onClick={handleTrackByTicket} data-testid="button-track-by-ticket">
+                    <Search className="h-4 w-4 mr-2" />
+                    Search
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* User Tickets Results */}
+            {userTickets && trackingEmail && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Your Support Tickets</CardTitle>
+                  <CardDescription>
+                    Found {userTickets.length} ticket(s) for {trackingEmail}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {userTickets.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No tickets found for this email address</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {userTickets.map((ticket) => (
+                        <TicketCard key={ticket.id} ticket={ticket} />
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Single Ticket Result */}
+            {singleTicket && trackingTicket && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Ticket Details</CardTitle>
+                  <CardDescription>
+                    Showing details for ticket {singleTicket.ticketNumber}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <TicketCard ticket={singleTicket} expanded />
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
+  );
+}
+
+function TicketCard({ ticket, expanded = false }: { ticket: ContactMessage; expanded?: boolean }) {
+  const [isExpanded, setIsExpanded] = useState(expanded);
+
+  return (
+    <Card className="transition-all duration-200 hover:shadow-md">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-lg">{ticket.subject}</CardTitle>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>#{ticket.ticketNumber}</span>
+              <span>•</span>
+              <span>{ticket.category.replace("-", " ")}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge className={statusColors[ticket.status as keyof typeof statusColors]}>
+              {ticket.status === "open" && <Clock className="h-3 w-3 mr-1" />}
+              {ticket.status === "in-progress" && <AlertCircle className="h-3 w-3 mr-1" />}
+              {ticket.status === "replied" && <CheckCircle className="h-3 w-3 mr-1" />}
+              {ticket.status === "closed" && <XCircle className="h-3 w-3 mr-1" />}
+              {ticket.status.replace("-", " ")}
+            </Badge>
+          </div>
+        </div>
+      </CardHeader>
+      
+      {(isExpanded || expanded) && (
+        <CardContent className="pt-0">
+          <div className="space-y-4">
+            <div>
+              <h4 className="font-medium mb-2">Your Message:</h4>
+              <p className="text-sm bg-muted p-3 rounded">{ticket.message}</p>
+            </div>
+            
+            {ticket.adminReply && (
+              <div>
+                <h4 className="font-medium mb-2">Admin Reply:</h4>
+                <p className="text-sm bg-blue-50 dark:bg-blue-950 p-3 rounded border-l-4 border-blue-500">
+                  {ticket.adminReply}
+                </p>
+              </div>
+            )}
+            
+            <div className="flex justify-between text-xs text-muted-foreground pt-2 border-t">
+              <span>Created: {new Date(ticket.createdAt).toLocaleDateString()}</span>
+              {ticket.repliedAt && (
+                <span>Replied: {new Date(ticket.repliedAt).toLocaleDateString()}</span>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      )}
+      
+      {!expanded && (
+        <CardContent className="pt-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsExpanded(!isExpanded)}
+            data-testid={`button-toggle-ticket-${ticket.id}`}
+          >
+            {isExpanded ? "Show Less" : "Show Details"}
+          </Button>
+        </CardContent>
+      )}
+    </Card>
   );
 }
