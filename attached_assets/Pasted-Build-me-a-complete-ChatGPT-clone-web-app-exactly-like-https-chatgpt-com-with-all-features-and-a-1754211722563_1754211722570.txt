@@ -1,0 +1,1350 @@
+Build me a complete ChatGPT clone web app, exactly like https://chatgpt.com, with all features and a powerful UI.
+
+The clone must include:
+
+🌐 Core Pages:
+
+1. Login/Signup Page with email/password (Firebase or Supabase-based, if needed).
+
+
+2. Chat Interface Page with:
+
+Streamed AI responses (word-by-word typing effect).
+
+File upload support with preview (not processed but stored/shown).
+
+Dark/light mode toggle.
+
+Message timestamps and avatars.
+
+AI and user chat bubbles with markdown, code block, and math rendering.
+
+"Regenerate", "Copy", "Stop", and "Continue" buttons like chatgpt.com.
+
+Keyboard shortcut: Enter to send, Shift+Enter for newline.
+
+Send button activates only when input is non-empty ((input || "").trim() check).
+
+
+
+3. Model Selection Panel showing OpenAI models:
+
+gpt-4o, gpt-4, gpt-4-turbo, gpt-3.5-turbo, etc.
+
+UI lets user switch models per chat.
+
+
+
+4. Sidebar with features:
+
+New chat
+
+History view
+
+Upgrade Plan (dummy link)
+
+Clear chats
+
+
+
+
+⚙️ Backend Integration:
+
+Use OpenAI API key input by user to authenticate.
+
+Store chat history locally (localStorage) or via backend.
+
+Handle errors like:
+
+Maximum update depth exceeded
+
+Cannot read properties of undefined (reading 'trim')
+
+handleInputChange is not a function
+
+
+
+🛠️ Tech Stack:
+
+Frontend: Next.js + Tailwind CSS + React (TypeScript).
+
+Hooks: Custom useChat or integrated with Vercel AI SDK (or plain fetch).
+
+Optional backend: Node.js/Express or serverless for key-based proxy or plan upgrades.
+
+Must be mobile responsive and work well on Android and iOS.
+
+
+🧠 Advanced Features:
+
+"Typing…" animation when AI is responding.
+
+Auto scroll to latest message.
+
+Smooth transitions (Framer Motion or CSS).
+
+Multi-file upload support (drag/drop zone + “No file chosen” fallback).
+
+Markdown preview in real-time (optional).
+
+Free Plan banner + Upgrade to Team links (static).
+
+
+🎨 Design:
+
+Clone ChatGPT UI exactly: layout, fonts, icons (Lucide/Material).
+
+Highlight active chat in sidebar.
+
+Fade in message response (like real ChatGPT).
+
+Responsive design and full accessibility.
+
+include a robust "Settings" page, just like chatgpt.com.
+This page should be accessible from the sidebar and include the following advanced capabilities:
+
+
+---
+
+⚙️ Settings Page – Full Functionality
+
+🧠 1. Model & Behavior Configuration:
+
+Dropdown to select default model: gpt-4o, gpt-4-turbo, gpt-3.5-turbo, etc.
+
+Switch between:
+
+Streaming vs. non-streaming response.
+
+Maximum token limit per response (slider or input).
+
+Temperature control (slider 0.0 to 1.0).
+
+
+Toggle: Enable code rendering (Monaco/PrismJS).
+
+Toggle: Enable Markdown, LaTeX, and Tables.
+
+Toggle: Enable "Auto-summarize long replies".
+
+
+🧑‍💻 2. Code Safety & Developer Mode:
+
+Checkbox: ✅ "Prevent full code overwrites" → Only diff/update changed blocks of code (not entire file) using line-matching or AST parsing.
+
+Toggle: "Show line-by-line code annotations".
+
+Toggle: Show diff viewer when AI responds with code (for developers to confirm).
+
+
+📦 3. Artifacts / Assets Handling:
+
+Show a list of generated artifacts like code files, images, or charts created by the AI in current or past sessions.
+
+Allow exporting all artifacts (ZIP) or download individually.
+
+Artifacts should be stored per-session and session-restorable from history.
+
+
+🧠 4. Auto-Training / Fine-Tuning Helper (Simulated UI):
+
+UI simulation only — not real fine-tuning (since it needs backend).
+
+Upload documents for context memory (simulated vector search).
+
+Toggle: “Auto-learn from current chat” (saves chat locally or mocks learning).
+
+Show list of uploaded context files and remove them.
+
+Display: “Custom behavior summary” — generate natural language summary of how the user usually interacts.
+
+
+
+---
+
+📋 Extra Features for Settings:
+
+⚡ “Clear Context” button – removes custom behavior and uploaded memory.
+
+💬 “Export Conversation History” as JSON or Markdown.
+
+🧪 “Enable Labs Features” – placeholder switch to simulate upcoming AI features.
+
+🌍 Language & Region toggle.
+
+🎨 UI Theme Picker: Light, Dark, or Auto (based on system).
+
+🧑‍🔧 Developer Info: Show current token usage, latency, and streaming status.
+
+📜 API Key Management (input or remove OpenAI key).
+
+
+
+---
+
+💡 Note: The Settings must persist user preferences (e.g., with localStorage, useLocalStorageState, or user profile backend).
+
+✅ Settings should not reload the page — apply changes live wherever possible.
+
+Inside the chat interface (/chat page), you want:
+
+Feature	Description
+
+Message formatting	Markdown, syntax highlighting, LaTeX math, bold, italics, links, etc.
+Edit user message	Let the user click “Edit” on their message, change it, and re-send it.
+Copy AI message	“Copy” button on AI responses with visual feedback (like ✅ Copied!).
+Share AI message	“Share” button to copy permalink / open modal to export/share answer.
+Animations	Fade-in for new messages, typing cursor, button hover effects, etc.
+
+
+
+---
+
+💡 Prompt: Extend Chat Interface with All Messaging Features
+
+> Now update the ChatGPT clone /chat interface to support full message-level UX features like the real ChatGPT:
+
+
+---
+
+📝 1. Message Formatting
+
+Render Markdown:
+
+Code blocks (```) with syntax highlighting (Prism.js or Shiki).
+
+Inline code (like this), bold, italic, bullet/numbered lists.
+
+Links ([text](url)), tables, and horizontal dividers.
+
+LaTeX rendering via katex or mathjax (for math formatting).
+
+
+Ensure all formatting respects accessibility and is responsive.
+
+
+
+---
+
+✍️ 2. Edit User Message
+
+On hover over user message, show an "Edit" icon (✏️).
+
+When clicked:
+
+Replace the message with an input textarea.
+
+After edit, clicking "Save" re-submits the message and replaces old AI response.
+
+Cancel button restores the original message.
+
+
+Re-trigger the sendMessage() with edited input, clearing only that response.
+
+
+
+---
+
+📋 3. Copy AI Message
+
+On hover over AI message, show a "Copy" icon (📋).
+
+When clicked:
+
+Copies entire message text (including markdown).
+
+Show feedback animation: ✅ “Copied!” for 2 seconds.
+
+Use navigator.clipboard.writeText().
+
+
+
+
+---
+
+🔗 4. Share AI Message
+
+Show "Share" button (🔗) next to copy.
+
+On click:
+
+Open modal or dropdown with:
+
+"Copy Message Link" (dummy URL or generated).
+
+"Download as .txt"
+
+"Export as image" (render message in canvas for image export).
+
+
+
+Optionally allow share to X/Twitter, WhatsApp (using Web Share API).
+
+
+
+---
+
+✨ 5. Animations and UI Interactions
+
+Add fade-in animation for new messages (Framer Motion or CSS transitions).
+
+Show typing animation (e.g., blinking cursor or dot-dot-dot when AI is thinking).
+
+Animate "Send" button hover and disabled states.
+
+Smooth scroll to newest message on every update.
+
+When editing, apply slide/fade transition for textarea input.
+
+
+
+---
+
+🔐 Bonus:
+
+AI messages should have unique messageId to support actions (edit/share/copy).
+
+Use ref and useEffect() to auto-scroll to bottom when messages update.
+
+Store edit history (optional) in session/local state.
+
+Clean keyboard support: Esc cancels edit, Enter sends edit.
+
+
+
+
+
+---
+
+🛠 Stack Recommendation:
+
+React + Tailwind CSS
+
+react-markdown + rehype-katex + remark-gfm
+
+Prism.js for code highlighting
+
+Framer Motion or @headlessui/react transitions
+
+useEffect, useRef for animations/scrolling
+
+✅ Chat history features — view, delete, persist chats
+
+🎨 Website theme system — light, dark, auto (like ChatGPT)
+
+
+Here’s the next powerful continuation prompt to feed to an AI code generator (or ask me to generate code from it directly):
+
+
+---
+
+📚 CONTINUED PROMPT – Chat History + Theme System
+
+> Now extend the ChatGPT clone with chat history management and a dynamic website theme system, just like ChatGPT.com:
+
+
+---
+
+📖 1. Chat History Panel
+
+Sidebar on left shows a scrollable list of previous chat sessions.
+
+Each chat shows:
+
+📝 First message snippet (truncated if long)
+
+🕓 Timestamp (e.g., “Aug 3, 12:43 PM”)
+
+
+When a chat is clicked:
+
+Loads the full conversation in the chat view.
+
+Scrolls to bottom.
+
+
+Add buttons:
+
+➕ New Chat — starts a fresh conversation.
+
+🗑️ Delete Chat — long-press or right-click opens confirmation modal:
+
+“Are you sure you want to delete this conversation?”
+
+“Cancel” / “Delete” (red)
+
+
+
+Add "🧹 Clear All" button at bottom to delete all chats (with confirm modal).
+
+
+💾 Storage
+
+Store chats in localStorage or IndexedDB as:
+
+{
+  id: "uuid",
+  createdAt: timestamp,
+  messages: [ { role: "user" | "assistant", content: "...", id: "msgId" } ]
+}
+
+On load, restore chats.
+
+Persist chat title as first message or allow rename later.
+
+
+
+---
+
+🎨 2. Website Theme (Light / Dark / Auto)
+
+Add to Settings page:
+
+Theme switch: Light, Dark, Auto (system)
+
+Preview of current theme.
+
+
+Store theme preference in localStorage (theme=dark or theme=system)
+
+Use Tailwind CSS + darkMode: "class" setting in config.
+
+Add global theme manager logic:
+
+useEffect(() => {
+  const root = window.document.documentElement;
+  if (storedTheme === 'dark') root.classList.add('dark');
+  else if (storedTheme === 'light') root.classList.remove('dark');
+  else if (system prefers dark) root.classList.add('dark');
+}, [storedTheme])
+
+Sync <meta name="theme-color" ...> to match theme color.
+
+
+🎨 UI Notes
+
+Use consistent color tokens (bg-background, text-foreground) for themeing.
+
+Add transition animation when switching themes (200ms fade).
+
+
+
+---
+
+🧼 Extras
+
+Clear chat button inside chat view header (for just that chat).
+
+Add tooltip on hover for all icons: "Copy", "Edit", "Delete", etc.
+
+Add responsive mobile support: collapse sidebar, floating action buttons.
+
+
+✅ All updates must be reactive, fast, and theme-compatible.
+
+Add a Claude-like Artifact System to the ChatGPT clone to handle versioned code generation and edits.
+
+
+---
+
+🛠 Artifact Management
+
+1. Artifact Object Schema:
+
+
+
+interface Artifact {
+  id: string; // e.g., "main.py"
+  version: number; // e.g., 1, 2, 3
+  content: string; // raw code
+  createdAt: Date;
+  linkedMessageId: string; // the message that created this artifact
+}
+
+2. When user asks for code:
+
+
+
+AI creates a new artifact:
+e.g., main.py - V1
+
+Display the code block with a version label and “Edit” button.
+
+Store the artifact in state or localStorage for the session.
+
+
+3. When user says "edit that code":
+
+
+
+System detects which artifact is being referred to (based on last code or message).
+
+AI reads existing artifact content (main.py - V1), applies minimal diff edits, and saves it as:
+
+main.py - V2 with changes applied.
+
+
+Display the diff or new version below.
+
+
+4. User UI for Artifacts:
+
+
+
+Artifact Sidebar (like Claude) showing:
+
+main.py - V1 ✅
+
+main.py - V2 🔁
+
+utils.js - V1 ✅
+
+
+Buttons: Edit, Download, Copy, Compare.
+
+Clicking a version shows it in the chat view.
+
+
+5. Smart AI Prompting for Diffs:
+
+
+
+When generating edited code:
+
+Inject this into prompt:
+
+> “Here is the current version of main.py:\n\n...code...\n\nPlease update it based on the following request. Only modify what’s needed. Return full updated file as main.py - V2.”
+
+
+
+
+
+
+---
+
+✅ Design Notes:
+
+Avoid rewriting code unless user explicitly says "rewrite".
+
+Always version with suffix like - V2, - V3 even for tiny changes.
+
+Allow user to download full ZIP of all artifacts.
+
+Add compareArtifacts(old: Artifact, new: Artifact) to highlight code diffs.
+
+
+
+---
+
+💬 Optional:
+
+Add comments in the updated code showing what was changed.
+
+Simulate Git-style diff viewer.
+
+Include “Revert to V1” button for rollback.
+
+If user uploads a file, treat it as V0.
+
+
+
+
+
+---
+
+✅ Real Example Flow
+
+1. User: “Create a login page in React.”
+
+→ Artifact created: LoginPage.tsx - V1
+
+
+
+2. User: “Add Google Sign-In to that.”
+
+→ AI fetches LoginPage.tsx - V1, applies edit.
+
+→ New artifact: LoginPage.tsx - V2
+
+
+
+3. User: “Now change button text to ‘Sign in with Google’”
+
+→ AI updates LoginPage.tsx - V2 → LoginPage.tsx - V3
+
+
+
+
+Each version is editable, downloadable, and restorable.
+
+> Extend the Model Selection Panel in your Settings or chat interface to include OpenAI’s latest multimodal models that support image and file inputs:
+
+🆕 Latest Models
+
+**1. GPT‑4.1 (Main, Mini, Nano)**
+‣ Released: April 14, 2025. New flagship multimodal model.
+‣ Supports text and image input, 1,000,000‑token context window.
+‣ GPT‑4.1 Mini (replaces GPT‑4o Mini) and Nano for speed/cost optimization.
+
+
+2. GPT‑4.5
+‣ Research preview launched February 2025. Accessible via ChatGPT API for Pro, Plus, Team tiers.
+‣ Enhanced pattern recognition, better emotional understanding, lower hallucination rates.
+‣ Supports image and file uploads.
+
+
+**3. o3 and o4‑mini (and o3‑pro)**
+‣ Released April 16, 2025. Advanced reasoning models with full multi‑modal support.
+‣ o3: strongest reasoning for math, coding, document & image analysis.
+‣ o4‑mini: lighter version optimized for speed and affordability. o3‑pro offers even higher accuracy.
+
+
+
+---
+
+⚙️ UI & Configuration Options
+
+Add to your Model Settings Panel:
+
+Dropdown to select one of:
+
+GPT‑4.1, GPT‑4.1 Mini, GPT‑4.1 Nano
+
+GPT‑4.5 (requires Pro/Plus access)
+
+o3, o4‑mini, o3‑pro
+
+
+Description tooltip with context window, pricing tier, and input modalities.
+
+Show icons if model supports: 🖼️ Image input, 📄 File input
+
+
+For file and image upload support, ensure the chat interface:
+
+Shows upload UI when user selects a model that supports it (GPT‑4.1, GPT‑4.5, o3, o4‑mini, o3‑pro)
+
+Validates permitted file types (e.g. .txt, .pdf, .csv, .png, .jpg)
+
+Appends file content or preview inline to AI prompt
+
+
+
+---
+
+🧩 Prompt Injection
+
+When sending API calls, automatically adjust payload based on model:
+
+{
+  "model": selectedModel,
+  "messages": [...],
+  "files": uploadedFilesIfSupported,
+  "images": uploadedImagesIfSupported,
+  "max_tokens": userSetting,
+  "temperature": userSetting
+}
+
+Include custom logic if file/image upload isn’t allowed for certain models.
+
+
+---
+
+✅ Ensure your app informs user if a model doesn’t support certain features (e.g. GPT‑4.5 image input might be restricted to preview users).
+
+That ensures your clone supports all input modalities and latest model lineup just like ChatGPT.com!
+
+
+
+
+---
+
+🎛 Suggested UI Mock for Model Picker
+
+Model Selection:
+[ ▾ Select model ]
+- GPT‑4.1       1M tokens · 🖼️ text + image
+- GPT‑4.1 Mini 1M tokens · 🖼️ text + image
+- GPT‑4.1 Nano 1M tokens · 🖼️ text + image
+- GPT‑4.5 (Pro) · 🖼️🗂️ text + image + file
+- o3 (Reasoning) · 🖼️🗂️ text + image + file
+- o4‑mini (Fast) · 🖼️🗂️ text + image + file
+- o3‑pro (High reliability) · 🖼️🗂️ text + image + file
+
+🎨 📱💻 Responsive UI Architecture – Explained
+
+Let’s walk through how to design this for both mobile and PC, without breaking anything:
+
+
+---
+
+📱 MOBILE VIEW DESIGN
+
+🔼 1. Header (Sticky Top)
+
++----------------------------------------+
+|  ☰  ChatGPT Clone            ▼ GPT-4o  |
++----------------------------------------+
+
+☰ Hamburger menu (opens left sidebar)
+
+Model Selector dropdown:
+
+Default: GPT-4o
+
+Tap to change
+
+Disables after first message is sent
+
+Smooth dropdown animation
+
+
+Use position: sticky; top: 0 and z-index to keep it visible
+
+
+
+---
+
+💬 2. Chat Area (100% Height)
+
+Messages take up entire screen height, minus header and input.
+
+Scrollable container (overflow-y: auto;)
+
+Animations on messages (e.g., fade-in, typing)
+
+
+
+---
+
+🧾 3. Input Footer
+
++---------------------------+
+| [Type a message...]  ⬆️  |
++---------------------------+
+
+Input grows with text
+
+Send button is:
+
+Disabled if input is empty
+
+Once first message is sent, model dropdown becomes locked
+
+
+
+
+---
+
+📂 4. Attachment UI
+
+File/image picker shown above input
+
+Use accept="image/*,.txt,.pdf" dynamically based on model
+
+Previews visible with X (remove) buttons
+
+
+
+---
+
+🍔 Hamburger Sidebar (Mobile)
+
+Hidden by default
+
+Toggled by ☰
+
+Slide-in from left using translate-x-[-100%] → translate-x-0
+
+Contains:
+
+New Chat
+
+Chat History
+
+Clear History
+
+Settings
+
+Export/Import
+
+
+
+
+---
+
+🖥 DESKTOP VIEW DESIGN
+
+🧭 1. Permanent Sidebar
+
++--------------+----------------------------+
+| Chat History |                            |
+| GPT-4o       |       Chat Area            |
+| New Chat     |                            |
+| Settings     |                            |
++--------------+----------------------------+
+
+Sidebar fixed on the left (width: 250px)
+
+Collapsible on small desktops
+
+Hover tooltips for compact mode
+
+
+
+---
+
+🖼 2. Chat Area
+
+Responsive layout (min-width: 0, flex: 1)
+
+Model selector is in the top bar of chat area
+
+On large screens:
+
+Keep model selector always visible
+
+Dim or disable after first message
+
+
+Scroll lock, focus ring, and accessibility should be tested
+
+
+
+---
+
+🔐 Locking Model After Send
+
+Logic:
+
+const [isModelLocked, setModelLocked] = useState(false);
+
+const handleSend = () => {
+  if (!input.trim()) return;
+  sendMessage(input);
+  setModelLocked(true);
+}
+
+UI:
+
+<Select disabled={isModelLocked} />
+
+
+---
+
+✅ Best Practices to Avoid UI Breaking
+
+Use Tailwind's hidden md:block / block md:hidden classes
+
+Avoid fixed heights; use min-h-screen with flex flex-col
+
+Use safe-area-inset-bottom padding on mobile for notch devices
+
+Ensure all dropdowns, modals, and menus are z-50+ and not clipped
+
+Keyboard-safe input field on mobile (scrollIntoView() after tap)
+
+
+
+---
+
+Bonus: Global Breakpoint Example
+
+<div className="flex h-screen w-full">
+  {/* Sidebar */}
+  <Sidebar className="hidden md:block w-64" />
+
+  {/* Mobile hamburger */}
+  <HamburgerMenu className="block md:hidden fixed top-0 left-0 z-50" />
+
+  {/* Chat Area */}
+  <main className="flex flex-col flex-1">
+    <Header />
+    <ChatScrollArea />
+    <InputFooter />
+  </main>
+</div>
+
+> Now extend the ChatGPT clone to support image generation and editing via OpenAI’s DALL·E, with an image history sidebar (Library).
+
+
+---
+
+🖼️ 1. Image Generation – via DALL·E
+
+When user types something like:
+
+> "Generate an image of a futuristic city"
+
+
+
+System detects image intent using simple keyword matcher or parsePromptForImage(prompt)
+
+If match:
+
+Use OpenAI’s dall-e-3 or dall-e-4 via /v1/images/generations
+
+Generate image and return result in chat as:
+
+🧠 AI generated image:
+[ImagePreviewComponent]
+🖼️ Prompt: "futuristic city"
+
+
+Show download and "Edit" buttons below image
+
+
+Example API Call:
+
+await openai.createImage({
+  prompt: userPrompt,
+  model: "dall-e-3",
+  size: "1024x1024",
+  response_format: "url",
+});
+
+
+---
+
+🧠 2. Image Editing (Inpainting)
+
+When user says something like:
+
+> "Edit that image, add a spaceship in the sky"
+
+
+
+Detect reference to previous image (last in context or by ID)
+
+Load that image into an editable canvas (basic <canvas> UI)
+
+Send edited prompt + image to OpenAI’s image edit endpoint
+
+
+Example:
+
+await openai.createImageEdit({
+  image: fs.createReadStream("original.png"),
+  mask: fs.createReadStream("mask.png"),
+  prompt: "add spaceship in the sky",
+  model: "dall-e-3",
+});
+
+
+---
+
+📂 3. Image Library (Hamburger Menu)
+
+Add "📁 Library" item in the mobile hamburger / desktop sidebar
+
+Clicking it opens a scrollable gallery of:
+
+All generated and edited images
+
+Metadata: Prompt, Version (V1, V2…), timestamp
+
+Buttons: "View", "Download", "Edit Again", "Delete"
+
+
+Images are saved in:
+
+
+interface ImageArtifact {
+  id: string;
+  prompt: string;
+  url: string;
+  version: number;
+  createdAt: Date;
+  editedFrom?: string; // Previous image ID
+}
+
+Save locally or in user profile backend (if logged in)
+
+
+
+---
+
+✅ UI Features
+
+Show loading state: "Generating image..."
+
+Fade-in animation when image is rendered
+
+Swipe to view on mobile, grid on desktop
+
+Collapsible "Library" section on mobile using the same hamburger UI
+
+Images are tied to chat sessions if chat history is enabled
+
+
+
+---
+
+Bonus Ideas:
+
+Show small "🖼️" icon next to messages that contain image prompts
+
+Allow reusing old prompts for new variations
+
+Add "Generate again" button to retry
+
+Image editor can have crop + draw tools (Canvas API)
+
+
+✅ This makes your ChatGPT clone support text + image + code, just like Claude, GPT-4o, and Gemini.
+
+Optimization Ideas for Your ChatGPT Clone
+
+To make your clone fast, responsive, and efficient like chatgpt.com, here are high-impact optimizations:
+
+🧠 Performance & UX Optimizations
+
+Feature	Description
+
+Virtualized chat list	Use react-virtualized or react-window to handle long message histories without DOM lag.
+Debounced user input	Add a 500ms debounce to input before evaluating intent (e.g., for image vs text).
+Lazy load images/code blocks	Images and code previews load only when in view (using IntersectionObserver).
+Minimal rerenders	Memoize components with React.memo, use useCallback.
+Typed message schema	Prevent bugs by enforcing message object types using zod or TypeScript.
+Separate render layer	Split UI and logic cleanly (e.g., useChatLogic() and <ChatView />).
+
+
+
+---
+
+⚡ Network/Latency Optimizations
+
+Feature	Description
+
+Streaming responses	Always prefer OpenAI's streaming mode (stream: true) for fastest UX.
+Retries with exponential backoff	Auto-retry failed requests with increasing delays.
+Cancel in-flight requests	Use AbortController to cancel message generation if user sends a new one.
+Batch API requests	For session restore, batch history fetch in chunks.
+
+
+
+---
+
+📱 Mobile Optimization
+
+Feature	Description
+
+Touch-optimized buttons	Use min-height, large hit zones (min-h-10, rounded-lg).
+Safe-area padding	Respect notches, especially iPhone (env(safe-area-inset-bottom)).
+Reduce animation jank	Use transform/opacity animations instead of height/width.
+
+
+
+---
+
+✅ Part 2: 🗝️ User-Provided API Key System
+
+🎯 Goal:
+
+Let the user:
+
+Enter their OpenAI API key in Settings
+
+Save it locally (only in browser/localStorage)
+
+Bot uses it for requests
+
+If key not set → show prompt: “⚠️ Set API key in Settings.”
+
+
+
+---
+
+🛠 Prompt to Feed Into Code Generator:
+
+> Add support for user-supplied OpenAI API key:
+
+In Settings, create input:
+Label: "Enter your OpenAI API Key" Placeholder: sk-...
+
+Button: Save Key
+
+On save:
+
+Store to localStorage["openai-api-key"]
+
+Toast message: ✅ “API key saved successfully”
+
+
+On chat load:
+
+If key is not set:
+
+Show banner: ⚠️ No API key set — go to Settings to add it
+
+Disable chat input
+
+
+
+All requests to OpenAI API should use:
+
+
+const key = localStorage.getItem("openai-api-key");
+const headers = {
+  Authorization: `Bearer ${key}`,
+  "Content-Type": "application/json",
+};
+
+Optional:
+
+Allow deleting/resetting key
+
+Validate key format (must start with sk-)
+
+Encrypt locally with window.crypto.subtle (optional)
+
+
+
+
+
+
+---
+
+🧪 Example Settings UI Code (Concept)
+
+const [apiKey, setApiKey] = useState(localStorage.getItem('openai-api-key') || '');
+
+const handleSave = () => {
+  localStorage.setItem('openai-api-key', apiKey.trim());
+  toast.success("✅ API key saved");
+};
+
+
+---
+
+📢 In Chat Page:
+
+if (!localStorage.getItem('openai-api-key')) {
+  return (
+    <div className="alert alert-warning">
+      ⚠️ No API key found. Please go to Settings to set it before chatting.
+    </div>
+  )
+}
+
+animated landing page for your ChatGPT clone — like chatgpt.com — optimized for mobile and PC.
+It should:
+
+
+
+Be fast
+
+Feel modern
+
+Have scroll-based and entrance animations
+
+Work well across all devices
+
+
+
+---
+
+🎨 UI Layout Breakdown (Landing Page)
+
+✏️ Sections (in order):
+
+1. Header/Navbar
+
+
+2. Hero Section
+
+
+3. Features Section
+
+
+4. Demo Section (Preview or Screenshots)
+
+
+5. Pricing or Plan Info
+
+
+6. Footer
+
+
+
+
+---
+
+🔝 1. Header/Navbar
+
++----------------------------------------------------+
+|  [🌐 ChatGPT Clone]   [Home] [Docs] [Login] [🌙]  |
++----------------------------------------------------+
+
+Responsive:
+
+On PC: Full nav visible
+
+On Mobile: Hamburger menu (☰)
+
+
+Add Theme toggle (light/dark)
+
+Animate on scroll (fade + sticky)
+
+
+✨ Animations:
+
+Fade-in + slide from top using Framer Motion or Tailwind transition-all
+
+On scroll, header shrinks (like sticky shrink nav)
+
+
+
+---
+
+💥 2. Hero Section
+
+[🔥 ChatGPT Clone]
+The Fastest Open Source AI UI
+[Start Chatting] [Try Demo]
+
+            [ 💬 Chat UI Animation GIF/Image ]
+
+Large title + subtitle
+
+Call-to-action buttons
+
+Display preview of app (image or live demo)
+
+
+Animations:
+
+Headline: fade-up on load
+
+Buttons: scale-up or pulse on hover
+
+Background image: parallax or float animation
+
+Text typing animation optional: "Chat with GPT‑4, DALL·E, and more..."
+
+
+
+---
+
+⚙️ 3. Features Section
+
+[⚡ Multimodal Support]
+[🔐 User API Key]
+[📁 Image Editing]
+[📚 Chat History]
+
+→ Each feature in a card with icon
+
+2-column grid (desktop), 1-column stack (mobile)
+
+Animate each card in with delay stagger effect
+
+
+
+---
+
+🖼️ 4. Demo / Screenshot Section
+
+[Live Chat Preview]
+[Image Generator Preview]
+[Code Editor Preview]
+
+🎥 Optional: Auto-playing video or Lottie animations
+
+On PC: grid layout
+
+On Android: horizontal swipe/scroll gallery
+
+
+Animations:
+
+Zoom-in or scale as each element enters viewport
+
+
+
+---
+
+💰 5. Pricing Section (Optional)
+
+Free   |   Pro   |   Team
+✓ Use API Key  |  Custom Branding |  Shared History
+
+Animate with tabs or cards
+
+Button: “Try for Free” / “Connect Your Key”
+
+
+
+---
+
+📞 6. Footer
+
+© 2025 ChatGPT Clone • GitHub • Terms • Privacy
+
+Mobile: stacked
+
+PC: row format
+
+Add social icons if needed
+
+
+
+---
+
+🧠 Animations Summary
+
+Element	Animation
+
+Navbar	Fade-down, sticky on scroll
+Hero Title	Fade-up + slide-in
+Buttons	Hover grow (hover:scale-105)
+Feature cards	Staggered fade-in
+Screenshots	Zoom-in on scroll
+Footer	Fade-in on bottom enter
+
+
+Use tools:
+
+Framer Motion (preferred for full control)
+
+AOS (Animate On Scroll)
+
+Tailwind CSS transitions
+
+
+
+---
+
+✅ Responsive Design Strategy
+
+Device	Layout Strategy
+
+📱 Android	1-column, full-width, big buttons, swipe gallery
+💻 Desktop	2–3 columns, hover states, max-width container
+🔄 Universal	flex, grid, min-h-screen, and overflow-hidden safety
+
+
+Tailwind Tips:
+
+w-full, max-w-7xl, mx-auto
+
+px-4 sm:px-6 lg:px-8 for padding
+
+md:grid-cols-2 for responsive cards
+
+transition-all duration-500 ease-in-out
+
+
+
+---
+
+⚡ Optional Additions
+
+🌙 Dark Mode toggle (stored in localStorage)
+
+🎥 Background Lottie animation
+
+📱 Add “Scroll Down” hint arrow on Hero
+
+🗺️ Route to /chat, /settings, /library from CTA buttons
