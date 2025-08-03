@@ -73,7 +73,13 @@ const verifyFirebaseToken = async (req: any, res: any, next: any) => {
     const token = authHeader.split(' ')[1];
     // For development, we'll extract user info from the token payload
     // In production, you should verify the Firebase ID token on the server
-    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+    let payload;
+    try {
+      payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+    } catch (error) {
+      console.error('Invalid token format:', error);
+      return res.status(401).json({ message: 'Invalid token format' });
+    }
     
     const user = {
       uid: payload.user_id || payload.sub,

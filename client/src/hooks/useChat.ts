@@ -70,8 +70,25 @@ export function useChat(chatId?: string): UseChat {
         });
       }
 
+      // Get Firebase auth headers
+      const { auth } = await import("@/lib/firebase");
+      const authHeaders: Record<string, string> = {};
+      
+      if (auth.currentUser) {
+        try {
+          const token = await auth.currentUser.getIdToken();
+          authHeaders.Authorization = `Bearer ${token}`;
+        } catch (error) {
+          console.error('Failed to get Firebase token:', error);
+          throw new Error('Authentication failed');
+        }
+      } else {
+        throw new Error('User not authenticated');
+      }
+
       const response = await fetch("/api/messages/send", {
         method: "POST",
+        headers: authHeaders,
         body: formData,
         credentials: "include",
       });
