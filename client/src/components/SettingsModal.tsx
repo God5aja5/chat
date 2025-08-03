@@ -51,6 +51,7 @@ type SettingsTab = "general" | "model" | "safety" | "artifacts" | "api";
 interface UserSettings {
   theme: "light" | "dark" | "auto";
   defaultModel: string;
+  defaultImageModel: string;
   temperature: number;
   maxTokens: number;
   streamingEnabled: boolean;
@@ -67,6 +68,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const [settings, setSettings] = useState<UserSettings>({
     theme: "auto",
     defaultModel: "gpt-4o",
+    defaultImageModel: "dall-e-3",
     temperature: 70,
     maxTokens: 2048,
     streamingEnabled: true,
@@ -105,6 +107,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       setSettings({
         theme: settingsData.theme || "auto",
         defaultModel: settingsData.defaultModel || "gpt-4o",
+        defaultImageModel: settingsData.defaultImageModel || "dall-e-3",
         temperature: settingsData.temperature || 70,
         maxTokens: settingsData.maxTokens || 2048,
         streamingEnabled: settingsData.streamingEnabled ?? true,
@@ -184,6 +187,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       setSettings({
         theme: settingsData.theme || "auto",
         defaultModel: settingsData.defaultModel || "gpt-4o",
+        defaultImageModel: settingsData.defaultImageModel || "dall-e-3",
         temperature: settingsData.temperature || 70,
         maxTokens: settingsData.maxTokens || 2048,
         streamingEnabled: settingsData.streamingEnabled ?? true,
@@ -408,9 +412,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     <div className="space-y-6">
                       {/* Default Model */}
                       <div>
-                        <Label className="text-base font-medium">Default Model</Label>
+                        <Label className="text-base font-medium">Default Chat Model</Label>
                         <p className="text-sm text-muted-foreground mb-3">
-                          Choose your preferred AI model
+                          Choose your preferred AI model for conversations
                         </p>
                         <Select
                           value={settings.defaultModel}
@@ -426,6 +430,28 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                             <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
                             <SelectItem value="gpt-4">GPT-4</SelectItem>
                             <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Default Image Model */}
+                      <div>
+                        <Label className="text-base font-medium">Default Image Model</Label>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Choose your preferred model for image generation
+                        </p>
+                        <Select
+                          value={settings.defaultImageModel}
+                          onValueChange={(value) => updateSetting("defaultImageModel", value)}
+                        >
+                          <SelectTrigger className={cn(
+                            isMobile ? "w-full h-12 text-base" : "w-64"
+                          )}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="dall-e-3">DALL-E 3 (High Quality)</SelectItem>
+                            <SelectItem value="dall-e-2">DALL-E 2 (Fast)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

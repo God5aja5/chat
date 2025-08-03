@@ -5,6 +5,12 @@ import {
   files,
   userSettings,
   artifacts,
+  plans,
+  subscriptions,
+  redeemCodes,
+  contactMessages,
+  usageTracking,
+  adminUsers,
   type User,
   type UpsertUser,
   type InsertChat,
@@ -17,9 +23,23 @@ import {
   type UserSettings,
   type InsertArtifact,
   type Artifact,
+  type Plan,
+  type InsertPlan,
+  type Subscription,
+  type InsertSubscription,
+  type RedeemCode,
+  type InsertRedeemCode,
+  type ContactMessage,
+  type InsertContactMessage,
+  type UsageTracking,
+  type InsertUsageTracking,
+  type AdminUser,
+  type InsertAdminUser,
   type ChatWithMessages,
   type MessageWithFiles,
   type UserWithSettings,
+  type SubscriptionWithPlan,
+  type RedeemCodeWithPlan,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -60,6 +80,42 @@ export interface IStorage {
   updateArtifact(artifactId: string, data: Partial<InsertArtifact>): Promise<Artifact>;
   deleteArtifact(artifactId: string): Promise<void>;
   deleteUserArtifacts(userId: string): Promise<void>;
+  
+  // Premium plan operations
+  getPlans(): Promise<Plan[]>;
+  createPlan(data: InsertPlan): Promise<Plan>;
+  updatePlan(planId: string, data: Partial<InsertPlan>): Promise<Plan>;
+  deletePlan(planId: string): Promise<void>;
+  
+  // Subscription operations
+  getUserSubscription(userId: string): Promise<SubscriptionWithPlan | undefined>;
+  createSubscription(data: InsertSubscription): Promise<Subscription>;
+  updateSubscription(subscriptionId: string, data: Partial<InsertSubscription>): Promise<Subscription>;
+  expireSubscription(subscriptionId: string): Promise<void>;
+  getActiveSubscriptions(): Promise<SubscriptionWithPlan[]>;
+  
+  // Redeem code operations
+  getRedeemCode(code: string): Promise<RedeemCodeWithPlan | undefined>;
+  createRedeemCode(data: InsertRedeemCode): Promise<RedeemCode>;
+  useRedeemCode(code: string, userId: string): Promise<RedeemCode>;
+  getUnusedRedeemCodes(): Promise<RedeemCodeWithPlan[]>;
+  deleteRedeemCode(codeId: string): Promise<void>;
+  
+  // Contact message operations
+  getContactMessages(): Promise<ContactMessage[]>;
+  createContactMessage(data: InsertContactMessage): Promise<ContactMessage>;
+  updateContactMessage(messageId: string, data: { status?: string, adminReply?: string }): Promise<ContactMessage>;
+  deleteContactMessage(messageId: string): Promise<void>;
+  
+  // Usage tracking operations
+  recordUsage(data: InsertUsageTracking): Promise<UsageTracking>;
+  getUserUsage(userId: string, type?: string, startDate?: Date): Promise<UsageTracking[]>;
+  getUserDailyUsage(userId: string, date?: Date): Promise<{ chat: number, image: number, token: number }>;
+  
+  // Admin operations
+  getAdminUser(username: string): Promise<AdminUser | undefined>;
+  createAdminUser(data: InsertAdminUser): Promise<AdminUser>;
+  updateAdminLastLogin(username: string): Promise<void>;
   
   // Data management
   deleteUserData(userId: string): Promise<void>;
@@ -297,12 +353,301 @@ export class DatabaseStorage implements IStorage {
       );
   }
   
+  // Premium plan operations
+  async getPlans(): Promise<Plan[]> {
+    return await db
+      .select()
+      .from(plans)
+      .where(eq(plans.isActive, true))
+      .orderBy(plans.price);
+  }
+
+  async createPlan(data: InsertPlan): Promise<Plan> {
+    const [plan] = await db
+      .insert(plans)
+      .values(data)
+      .returning();
+    return plan;
+  }
+
+  async updatePlan(planId: string, data: Partial<InsertPlan>): Promise<Plan> {
+    const [plan] = await db
+      .update(plans)
+      .set(data)
+      .where(eq(plans.id, planId))
+      .returning();
+    return plan;
+  }
+
+  async deletePlan(planId: string): Promise<void> {
+    await db.delete(plans).where(eq(plans.id, planId));
+  }
+
+  // Subscription operations
+  async getUserSubscription(userId: string): Promise<SubscriptionWithPlan | undefined> {
+    const [subscription] = await db
+      .select({
+        id: subscriptions.id,
+        userId: subscriptions.userId,
+        planId: subscriptions.planId,
+        status: subscriptions.status,
+        expiresAt: subscriptions.expiresAt,
+        createdAt: subscriptions.createdAt,
+        updatedAt: subscriptions.updatedAt,
+        plan: plans,
+      })
+      .from(subscriptions)
+      .innerJoin(plans, eq(subscriptions.planId, plans.id))
+      .where(and(
+        eq(subscriptions.userId, userId),
+        eq(subscriptions.status, "active"),
+        sql`${subscriptions.expiresAt} > NOW()`
+      ))
+      .orderBy(desc(subscriptions.createdAt))
+      .limit(1);
+    
+    return subscription as SubscriptionWithPlan;
+  }
+
+  async createSubscription(data: InsertSubscription): Promise<Subscription> {
+    const [subscription] = await db
+      .insert(subscriptions)
+      .values(data)
+      .returning();
+    return subscription;
+  }
+
+  async updateSubscription(subscriptionId: string, data: Partial<InsertSubscription>): Promise<Subscription> {
+    const [subscription] = await db
+      .update(subscriptions)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(subscriptions.id, subscriptionId))
+      .returning();
+    return subscription;
+  }
+
+  async expireSubscription(subscriptionId: string): Promise<void> {
+    await db
+      .update(subscriptions)
+      .set({ status: "expired", updatedAt: new Date() })
+      .where(eq(subscriptions.id, subscriptionId));
+  }
+
+  async getActiveSubscriptions(): Promise<SubscriptionWithPlan[]> {
+    return await db
+      .select({
+        id: subscriptions.id,
+        userId: subscriptions.userId,
+        planId: subscriptions.planId,
+        status: subscriptions.status,
+        expiresAt: subscriptions.expiresAt,
+        createdAt: subscriptions.createdAt,
+        updatedAt: subscriptions.updatedAt,
+        plan: plans,
+        user: users,
+      })
+      .from(subscriptions)
+      .innerJoin(plans, eq(subscriptions.planId, plans.id))
+      .innerJoin(users, eq(subscriptions.userId, users.id))
+      .where(and(
+        eq(subscriptions.status, "active"),
+        sql`${subscriptions.expiresAt} > NOW()`
+      ))
+      .orderBy(desc(subscriptions.createdAt)) as SubscriptionWithPlan[];
+  }
+
+  // Redeem code operations
+  async getRedeemCode(code: string): Promise<RedeemCodeWithPlan | undefined> {
+    const [redeemCode] = await db
+      .select({
+        id: redeemCodes.id,
+        code: redeemCodes.code,
+        planId: redeemCodes.planId,
+        duration: redeemCodes.duration,
+        isUsed: redeemCodes.isUsed,
+        usedBy: redeemCodes.usedBy,
+        usedAt: redeemCodes.usedAt,
+        createdAt: redeemCodes.createdAt,
+        expiresAt: redeemCodes.expiresAt,
+        plan: plans,
+      })
+      .from(redeemCodes)
+      .innerJoin(plans, eq(redeemCodes.planId, plans.id))
+      .where(eq(redeemCodes.code, code));
+    
+    return redeemCode as RedeemCodeWithPlan;
+  }
+
+  async createRedeemCode(data: InsertRedeemCode): Promise<RedeemCode> {
+    const [redeemCode] = await db
+      .insert(redeemCodes)
+      .values(data)
+      .returning();
+    return redeemCode;
+  }
+
+  async useRedeemCode(code: string, userId: string): Promise<RedeemCode> {
+    const [redeemCode] = await db
+      .update(redeemCodes)
+      .set({ 
+        isUsed: true, 
+        usedBy: userId, 
+        usedAt: new Date() 
+      })
+      .where(eq(redeemCodes.code, code))
+      .returning();
+    return redeemCode;
+  }
+
+  async getUnusedRedeemCodes(): Promise<RedeemCodeWithPlan[]> {
+    return await db
+      .select({
+        id: redeemCodes.id,
+        code: redeemCodes.code,
+        planId: redeemCodes.planId,
+        duration: redeemCodes.duration,
+        isUsed: redeemCodes.isUsed,
+        usedBy: redeemCodes.usedBy,
+        usedAt: redeemCodes.usedAt,
+        createdAt: redeemCodes.createdAt,
+        expiresAt: redeemCodes.expiresAt,
+        plan: plans,
+      })
+      .from(redeemCodes)
+      .innerJoin(plans, eq(redeemCodes.planId, plans.id))
+      .where(eq(redeemCodes.isUsed, false))
+      .orderBy(desc(redeemCodes.createdAt)) as RedeemCodeWithPlan[];
+  }
+
+  async deleteRedeemCode(codeId: string): Promise<void> {
+    await db.delete(redeemCodes).where(eq(redeemCodes.id, codeId));
+  }
+
+  // Contact message operations
+  async getContactMessages(): Promise<ContactMessage[]> {
+    return await db
+      .select()
+      .from(contactMessages)
+      .orderBy(desc(contactMessages.createdAt));
+  }
+
+  async createContactMessage(data: InsertContactMessage): Promise<ContactMessage> {
+    const [contactMessage] = await db
+      .insert(contactMessages)
+      .values(data)
+      .returning();
+    return contactMessage;
+  }
+
+  async updateContactMessage(messageId: string, data: { status?: string, adminReply?: string }): Promise<ContactMessage> {
+    const updateData: any = { ...data };
+    if (data.adminReply) {
+      updateData.repliedAt = new Date();
+      updateData.status = "replied";
+    }
+    
+    const [contactMessage] = await db
+      .update(contactMessages)
+      .set(updateData)
+      .where(eq(contactMessages.id, messageId))
+      .returning();
+    return contactMessage;
+  }
+
+  async deleteContactMessage(messageId: string): Promise<void> {
+    await db.delete(contactMessages).where(eq(contactMessages.id, messageId));
+  }
+
+  // Usage tracking operations
+  async recordUsage(data: InsertUsageTracking): Promise<UsageTracking> {
+    const [usage] = await db
+      .insert(usageTracking)
+      .values(data)
+      .returning();
+    return usage;
+  }
+
+  async getUserUsage(userId: string, type?: string, startDate?: Date): Promise<UsageTracking[]> {
+    let query = db
+      .select()
+      .from(usageTracking)
+      .where(eq(usageTracking.userId, userId));
+
+    if (type) {
+      query = query.where(eq(usageTracking.type, type));
+    }
+
+    if (startDate) {
+      query = query.where(sql`${usageTracking.date} >= ${startDate}`);
+    }
+
+    return await query.orderBy(desc(usageTracking.date));
+  }
+
+  async getUserDailyUsage(userId: string, date?: Date): Promise<{ chat: number, image: number, token: number }> {
+    const targetDate = date || new Date();
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const usage = await db
+      .select({
+        type: usageTracking.type,
+        totalCount: sql<number>`SUM(${usageTracking.count})`,
+      })
+      .from(usageTracking)
+      .where(
+        and(
+          eq(usageTracking.userId, userId),
+          sql`${usageTracking.date} >= ${startOfDay}`,
+          sql`${usageTracking.date} <= ${endOfDay}`
+        )
+      )
+      .groupBy(usageTracking.type);
+
+    const result = { chat: 0, image: 0, token: 0 };
+    usage.forEach(row => {
+      if (row.type === "chat") result.chat = row.totalCount;
+      if (row.type === "image") result.image = row.totalCount;
+      if (row.type === "token") result.token = row.totalCount;
+    });
+
+    return result;
+  }
+
+  // Admin operations
+  async getAdminUser(username: string): Promise<AdminUser | undefined> {
+    const [admin] = await db
+      .select()
+      .from(adminUsers)
+      .where(eq(adminUsers.username, username));
+    return admin;
+  }
+
+  async createAdminUser(data: InsertAdminUser): Promise<AdminUser> {
+    const [admin] = await db
+      .insert(adminUsers)
+      .values(data)
+      .returning();
+    return admin;
+  }
+
+  async updateAdminLastLogin(username: string): Promise<void> {
+    await db
+      .update(adminUsers)
+      .set({ lastLogin: new Date() })
+      .where(eq(adminUsers.username, username));
+  }
+
   // Data management
   async deleteUserData(userId: string): Promise<void> {
     // Delete in correct order due to foreign key constraints
     await this.deleteUserArtifacts(userId);
     await this.deleteUserChats(userId);
     await db.delete(userSettings).where(eq(userSettings.userId, userId));
+    await db.delete(subscriptions).where(eq(subscriptions.userId, userId));
+    await db.delete(usageTracking).where(eq(usageTracking.userId, userId));
     // Note: We don't delete the user record itself as it's managed by auth
   }
 }

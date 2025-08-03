@@ -34,7 +34,12 @@ import {
   Edit3,
   Menu,
   X,
+  CreditCard,
+  Mail,
+  Gift,
 } from "lucide-react";
+import { Link } from "wouter";
+import RedeemCodeModal from "@/components/RedeemCodeModal";
 import type { Chat } from "@shared/schema";
 
 interface SidebarProps {
@@ -287,20 +292,38 @@ export function Sidebar({ isOpen, onToggle, onSettingsOpen, className }: Sidebar
             <Settings className="h-4 w-4 mr-3" />
             Settings
           </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-sm"
-            onClick={() => {
-              // TODO: Implement upgrade flow
-              toast({
-                title: "Coming Soon",
-                description: "Upgrade functionality will be available soon.",
-              });
-            }}
-          >
-            <Crown className="h-4 w-4 mr-3 text-yellow-500" />
-            Upgrade plan
-          </Button>
+          <Link href="/pricing">
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-sm"
+              data-testid="button-upgrade-plan"
+            >
+              <Crown className="h-4 w-4 mr-3 text-yellow-500" />
+              Upgrade plan
+            </Button>
+          </Link>
+          
+          <Link href="/contact">
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-sm"
+              data-testid="button-contact"
+            >
+              <Mail className="h-4 w-4 mr-3" />
+              Contact Support
+            </Button>
+          </Link>
+          
+          <RedeemCodeModal>
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-sm"
+              data-testid="button-redeem-code"
+            >
+              <Gift className="h-4 w-4 mr-3 text-green-500" />
+              Redeem Code
+            </Button>
+          </RedeemCodeModal>
 
           <Separator className="my-2" />
 

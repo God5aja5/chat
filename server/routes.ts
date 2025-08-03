@@ -12,6 +12,12 @@ import {
   insertMessageSchema,
   insertUserSettingsSchema,
   insertArtifactSchema,
+  insertPlanSchema,
+  insertSubscriptionSchema,
+  insertRedeemCodeSchema,
+  insertContactMessageSchema,
+  insertUsageTrackingSchema,
+  insertAdminUserSchema,
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -281,6 +287,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content: msg.content,
       }));
 
+      // Check if this is an image generation request
+      const messageContent = content.toLowerCase();
+      const isImageRequest = messageContent.includes("generate image") || 
+                           messageContent.includes("create image") || 
+                           messageContent.includes("draw") ||
+                           messageContent.includes("make picture") ||
+                           messageContent.includes("dall-e") ||
+                           messageContent.includes("image of");
+
       let assistantResponse = "";
       
       // Create assistant message placeholder
@@ -290,32 +305,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content: "",
       });
 
-      // Stream response from OpenAI
-      await openaiService.streamChatCompletion({
-        messages: conversationHistory,
-        model: chat.model,
-        temperature: userSettings?.temperature || 70,
-        maxTokens: userSettings?.maxTokens || 2048,
-        apiKey,
-        onToken: (token) => {
-          assistantResponse += token;
-          res.write(`data: ${JSON.stringify({ content: token })}\n\n`);
-        },
-        onComplete: async (fullResponse) => {
-          // Update the assistant message with final content
-          await storage.updateMessage(assistantMessage.id, {
-            content: fullResponse,
+      if (isImageRequest) {
+        try {
+          // Extract image prompt from user message
+          const prompt = content.replace(/generate image|create image|draw|make picture|dall-e|image of/gi, '').trim();
+          
+          res.write(`data: ${JSON.stringify({ content: "Generating image..." })}\n\n`);
+          
+          const imageResult = await openaiService.generateImage(prompt, apiKey, {
+            model: userSettings?.defaultImageModel as "dall-e-2" | "dall-e-3" || "dall-e-3",
           });
           
+          const imageResponse = `I've generated an image for you:\n\n![Generated Image](${imageResult.url})\n\n**Prompt:** ${prompt}`;
+          
+          // Update the assistant message with final content
+          await storage.updateMessage(assistantMessage.id, {
+            content: imageResponse,
+          });
+
+          // Record image usage
+          await storage.recordUsage({
+            userId,
+            type: "image",
+            count: 1,
+          });
+          
+          res.write(`data: ${JSON.stringify({ content: imageResponse, final: true })}\n\n`);
           res.write(`data: [DONE]\n\n`);
           res.end();
-        },
-        onError: (error) => {
-          console.error("OpenAI streaming error:", error);
-          res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+        } catch (error) {
+          console.error("Image generation error:", error);
+          const errorResponse = "Sorry, I couldn't generate the image. Please check your OpenAI API key has DALL-E access or try again later.";
+          
+          await storage.updateMessage(assistantMessage.id, {
+            content: errorResponse,
+          });
+          
+          res.write(`data: ${JSON.stringify({ content: errorResponse, error: true })}\n\n`);
           res.end();
-        },
-      });
+        }
+      } else {
+        // Regular chat completion
+        await openaiService.streamChatCompletion({
+          messages: conversationHistory,
+          model: chat.model,
+          temperature: userSettings?.temperature || 70,
+          maxTokens: userSettings?.maxTokens || 2048,
+          apiKey,
+          onToken: (token) => {
+            assistantResponse += token;
+            res.write(`data: ${JSON.stringify({ content: token })}\n\n`);
+          },
+          onComplete: async (fullResponse) => {
+            // Update the assistant message with final content
+            await storage.updateMessage(assistantMessage.id, {
+              content: fullResponse,
+            });
+
+            // Record chat usage
+            await storage.recordUsage({
+              userId,
+              type: "chat",
+              count: 1,
+            });
+            
+            res.write(`data: [DONE]\n\n`);
+            res.end();
+          },
+          onError: (error) => {
+            console.error("OpenAI streaming error:", error);
+            res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+            res.end();
+          },
+        });
+      }
 
     } catch (error) {
       console.error("Error sending message:", error);
@@ -398,6 +461,251 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting user data:", error);
       res.status(500).json({ message: "Failed to delete user data" });
+    }
+  });
+
+  // Plans and subscription routes
+  app.get('/api/plans', async (req, res) => {
+    try {
+      const plans = await storage.getPlans();
+      res.json(plans);
+    } catch (error) {
+      console.error("Error fetching plans:", error);
+      res.status(500).json({ message: "Failed to fetch plans" });
+    }
+  });
+
+  app.get('/api/subscription', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const subscription = await storage.getUserSubscription(userId);
+      res.json(subscription || null);
+    } catch (error) {
+      console.error("Error fetching subscription:", error);
+      res.status(500).json({ message: "Failed to fetch subscription" });
+    }
+  });
+
+  app.post('/api/subscription', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const subscriptionData = insertSubscriptionSchema.parse({
+        ...req.body,
+        userId,
+      });
+      
+      const subscription = await storage.createSubscription(subscriptionData);
+      res.json(subscription);
+    } catch (error) {
+      console.error("Error creating subscription:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid subscription data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create subscription" });
+    }
+  });
+
+  // Redeem code routes
+  app.post('/api/redeem', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { code } = req.body;
+      
+      if (!code) {
+        return res.status(400).json({ message: "Redeem code is required" });
+      }
+
+      const redeemCode = await storage.getRedeemCode(code);
+      if (!redeemCode) {
+        return res.status(404).json({ message: "Invalid redeem code" });
+      }
+
+      if (redeemCode.isUsed) {
+        return res.status(400).json({ message: "Redeem code has already been used" });
+      }
+
+      // Check if code is expired
+      if (redeemCode.expiresAt && new Date() > redeemCode.expiresAt) {
+        return res.status(400).json({ message: "Redeem code has expired" });
+      }
+
+      // Create subscription based on redeem code
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + redeemCode.duration);
+
+      const subscription = await storage.createSubscription({
+        userId,
+        planId: redeemCode.planId,
+        status: "active",
+        expiresAt,
+      });
+
+      // Mark redeem code as used
+      await storage.useRedeemCode(code, userId);
+
+      res.json({ subscription, message: "Redeem code applied successfully!" });
+    } catch (error) {
+      console.error("Error redeeming code:", error);
+      res.status(500).json({ message: "Failed to redeem code" });
+    }
+  });
+
+  // Contact message routes
+  app.post('/api/contact', async (req, res) => {
+    try {
+      const contactData = insertContactMessageSchema.parse(req.body);
+      const message = await storage.createContactMessage(contactData);
+      res.json({ message: "Message sent successfully", id: message.id });
+    } catch (error) {
+      console.error("Error creating contact message:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid contact data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  // Usage tracking routes
+  app.get('/api/usage', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { type, days } = req.query;
+      
+      let startDate;
+      if (days) {
+        startDate = new Date();
+        startDate.setDate(startDate.getDate() - parseInt(days as string));
+      }
+      
+      const usage = await storage.getUserUsage(userId, type as string, startDate);
+      const dailyUsage = await storage.getUserDailyUsage(userId);
+      
+      res.json({
+        usage,
+        daily: dailyUsage,
+      });
+    } catch (error) {
+      console.error("Error fetching usage:", error);
+      res.status(500).json({ message: "Failed to fetch usage" });
+    }
+  });
+
+  // Admin routes (protected by admin middleware)
+  const adminAuth = async (req: any, res: any, next: any) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(401).json({ message: "Username and password required" });
+      }
+
+      const admin = await storage.getAdminUser(username);
+      if (!admin) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      // Simple password comparison (in real app, use proper hashing comparison)
+      const crypto = require("crypto");
+      const [hashed, salt] = admin.password.split(".");
+      const hashedBuf = Buffer.from(hashed, "hex");
+      const suppliedBuf = await crypto.scrypt(password, salt, 64);
+      const isValid = crypto.timingSafeEqual(hashedBuf, suppliedBuf);
+
+      if (!isValid) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      await storage.updateAdminLastLogin(username);
+      req.admin = admin;
+      next();
+    } catch (error) {
+      console.error("Admin auth error:", error);
+      res.status(500).json({ message: "Authentication failed" });
+    }
+  };
+
+  app.post('/api/admin/login', adminAuth, async (req: any, res) => {
+    res.json({ message: "Login successful", admin: req.admin });
+  });
+
+  app.get('/api/admin/dashboard', async (req, res) => {
+    try {
+      // Get dashboard data
+      const plans = await storage.getPlans();
+      const subscriptions = await storage.getActiveSubscriptions();
+      const contactMessages = await storage.getContactMessages();
+      const redeemCodes = await storage.getUnusedRedeemCodes();
+
+      res.json({
+        stats: {
+          totalPlans: plans.length,
+          activeSubscriptions: subscriptions.length,
+          pendingMessages: contactMessages.filter(m => m.status === "unread").length,
+          unusedCodes: redeemCodes.length,
+        },
+        plans,
+        subscriptions: subscriptions.slice(0, 10), // Recent 10
+        contactMessages: contactMessages.slice(0, 10), // Recent 10
+        redeemCodes: redeemCodes.slice(0, 10), // Recent 10
+      });
+    } catch (error) {
+      console.error("Error fetching admin dashboard:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard data" });
+    }
+  });
+
+  app.post('/api/admin/plans', async (req, res) => {
+    try {
+      const planData = insertPlanSchema.parse(req.body);
+      const plan = await storage.createPlan(planData);
+      res.json(plan);
+    } catch (error) {
+      console.error("Error creating plan:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid plan data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create plan" });
+    }
+  });
+
+  app.post('/api/admin/redeem-codes', async (req, res) => {
+    try {
+      const { count = 1, ...codeData } = req.body;
+      const codes = [];
+      
+      for (let i = 0; i < count; i++) {
+        const code = Math.random().toString(36).substring(2, 15).toUpperCase();
+        const redeemCode = await storage.createRedeemCode({
+          ...insertRedeemCodeSchema.parse(codeData),
+          code,
+        });
+        codes.push(redeemCode);
+      }
+      
+      res.json({ codes, message: `${count} redeem codes created successfully` });
+    } catch (error) {
+      console.error("Error creating redeem codes:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid redeem code data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create redeem codes" });
+    }
+  });
+
+  app.put('/api/admin/contact/:messageId', async (req, res) => {
+    try {
+      const { messageId } = req.params;
+      const { status, adminReply } = req.body;
+      
+      const updatedMessage = await storage.updateContactMessage(messageId, {
+        status,
+        adminReply,
+      });
+      
+      res.json(updatedMessage);
+    } catch (error) {
+      console.error("Error updating contact message:", error);
+      res.status(500).json({ message: "Failed to update contact message" });
     }
   });
 

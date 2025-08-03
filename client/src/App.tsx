@@ -6,6 +6,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import Landing from "@/pages/Landing";
 import ChatPage from "@/pages/Chat";
+import PricingPage from "@/pages/pricing-page";
+import ContactPage from "@/pages/contact-page";
+import AdminPage from "@/pages/admin-page";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -24,6 +27,11 @@ function Router() {
           <Route path="/chat/:chatId" component={({ params }) => <ChatPage chatId={params.chatId} />} />
         </>
       )}
+      
+      {/* Public pages available to all users */}
+      <Route path="/pricing" component={PricingPage} />
+      <Route path="/contact" component={ContactPage} />
+      <Route path="/admin" component={AdminPage} />
       
       {/* Fallback to 404 */}
       <Route component={NotFound} />

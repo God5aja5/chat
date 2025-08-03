@@ -75,6 +75,7 @@ export const userSettings = pgTable("user_settings", {
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
   theme: varchar("theme").default("auto"), // "light" | "dark" | "auto"
   defaultModel: varchar("default_model").default("gpt-4o"),
+  defaultImageModel: varchar("default_image_model").default("dall-e-3"), // DALL-E model for images
   temperature: integer("temperature").default(70), // 0-100
   maxTokens: integer("max_tokens").default(2048),
   streamingEnabled: boolean("streaming_enabled").default(true),
@@ -102,10 +103,83 @@ export const artifacts = pgTable("artifacts", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Premium Plans
+export const plans = pgTable("plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  price: integer("price").notNull(), // in cents
+  duration: varchar("duration").notNull(), // "monthly" | "yearly"
+  features: text("features").array().notNull(),
+  chatLimit: integer("chat_limit"), // null = unlimited
+  imageLimit: integer("image_limit"), // null = unlimited
+  dailyLimit: integer("daily_limit"), // for free plan
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// User Subscriptions
+export const subscriptions = pgTable("subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  planId: varchar("plan_id").notNull().references(() => plans.id),
+  status: varchar("status").notNull().default("active"), // "active" | "expired" | "cancelled"
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Redeem Codes
+export const redeemCodes = pgTable("redeem_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code").notNull().unique(),
+  planId: varchar("plan_id").notNull().references(() => plans.id),
+  duration: integer("duration").notNull(), // in days
+  isUsed: boolean("is_used").default(false),
+  usedBy: varchar("used_by").references(() => users.id),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
+});
+
+// Contact Messages
+export const contactMessages = pgTable("contact_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  email: varchar("email").notNull(),
+  subject: varchar("subject").notNull(),
+  message: text("message").notNull(),
+  status: varchar("status").default("unread"), // "unread" | "read" | "replied"
+  adminReply: text("admin_reply"),
+  createdAt: timestamp("created_at").defaultNow(),
+  repliedAt: timestamp("replied_at"),
+});
+
+// Usage Tracking
+export const usageTracking = pgTable("usage_tracking", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: varchar("type").notNull(), // "chat" | "image" | "token"
+  count: integer("count").notNull().default(1),
+  date: timestamp("date").defaultNow(),
+});
+
+// Admin Users
+export const adminUsers = pgTable("admin_users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: varchar("username").notNull().unique(),
+  password: varchar("password").notNull(), // hashed
+  role: varchar("role").default("admin"),
+  lastLogin: timestamp("last_login"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   chats: many(chats),
   settings: one(userSettings),
+  subscriptions: many(subscriptions),
+  usageTracking: many(usageTracking),
+  redeemCodesUsed: many(redeemCodes),
 }));
 
 export const chatsRelations = relations(chats, ({ one, many }) => ({
@@ -156,6 +230,40 @@ export const artifactsRelations = relations(artifacts, ({ one }) => ({
   }),
 }));
 
+export const plansRelations = relations(plans, ({ many }) => ({
+  subscriptions: many(subscriptions),
+  redeemCodes: many(redeemCodes),
+}));
+
+export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
+  user: one(users, {
+    fields: [subscriptions.userId],
+    references: [users.id],
+  }),
+  plan: one(plans, {
+    fields: [subscriptions.planId],
+    references: [plans.id],
+  }),
+}));
+
+export const redeemCodesRelations = relations(redeemCodes, ({ one }) => ({
+  plan: one(plans, {
+    fields: [redeemCodes.planId],
+    references: [plans.id],
+  }),
+  user: one(users, {
+    fields: [redeemCodes.usedBy],
+    references: [users.id],
+  }),
+}));
+
+export const usageTrackingRelations = relations(usageTracking, ({ one }) => ({
+  user: one(users, {
+    fields: [usageTracking.userId],
+    references: [users.id],
+  }),
+}));
+
 // Zod schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   email: true,
@@ -203,6 +311,44 @@ export const insertArtifactSchema = createInsertSchema(artifacts).pick({
   linkedArtifactId: true,
 });
 
+export const insertPlanSchema = createInsertSchema(plans).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRedeemCodeSchema = createInsertSchema(redeemCodes).omit({
+  id: true,
+  isUsed: true,
+  usedBy: true,
+  usedAt: true,
+  createdAt: true,
+});
+
+export const insertContactMessageSchema = createInsertSchema(contactMessages).omit({
+  id: true,
+  status: true,
+  adminReply: true,
+  createdAt: true,
+  repliedAt: true,
+});
+
+export const insertUsageTrackingSchema = createInsertSchema(usageTracking).omit({
+  id: true,
+  date: true,
+});
+
+export const insertAdminUserSchema = createInsertSchema(adminUsers).omit({
+  id: true,
+  lastLogin: true,
+  createdAt: true,
+});
+
 // Types
 export type UpsertUser = z.infer<typeof insertUserSchema> & { id: string };
 export type User = typeof users.$inferSelect;
@@ -216,6 +362,18 @@ export type InsertUserSettings = z.infer<typeof insertUserSettingsSchema>;
 export type UserSettings = typeof userSettings.$inferSelect;
 export type InsertArtifact = z.infer<typeof insertArtifactSchema>;
 export type Artifact = typeof artifacts.$inferSelect;
+export type InsertPlan = z.infer<typeof insertPlanSchema>;
+export type Plan = typeof plans.$inferSelect;
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+export type Subscription = typeof subscriptions.$inferSelect;
+export type InsertRedeemCode = z.infer<typeof insertRedeemCodeSchema>;
+export type RedeemCode = typeof redeemCodes.$inferSelect;
+export type InsertContactMessage = z.infer<typeof insertContactMessageSchema>;
+export type ContactMessage = typeof contactMessages.$inferSelect;
+export type InsertUsageTracking = z.infer<typeof insertUsageTrackingSchema>;
+export type UsageTracking = typeof usageTracking.$inferSelect;
+export type InsertAdminUser = z.infer<typeof insertAdminUserSchema>;
+export type AdminUser = typeof adminUsers.$inferSelect;
 
 // Extended types with relations
 export type ChatWithMessages = Chat & {
@@ -231,4 +389,21 @@ export type MessageWithFiles = Message & {
 
 export type UserWithSettings = User & {
   settings?: UserSettings;
+  subscription?: Subscription & { plan: Plan };
 };
+
+export type PlanWithSubscriptions = Plan & {
+  subscriptions: Subscription[];
+};
+
+export type SubscriptionWithPlan = Subscription & {
+  plan: Plan;
+  user: User;
+};
+
+export type RedeemCodeWithPlan = RedeemCode & {
+  plan: Plan;
+  user?: User;
+};
+
+export type ContactMessageWithStatus = ContactMessage;

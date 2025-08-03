@@ -8,6 +8,27 @@ This is a complete ChatGPT clone web application built with a modern full-stack 
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes (January 2025)
+
+### Premium Features Implementation
+- **Premium Subscription System**: Added comprehensive premium plans ($8 Basic, $15 Pro) with usage tracking and limits
+- **Admin Panel**: Complete admin dashboard with user management, subscription tracking, and contact message handling
+- **Contact System**: Full contact form with admin reply functionality and email integration
+- **Redeem Code System**: Generate and manage redeem codes for promotional campaigns
+- **DALL-E Integration**: Added image generation support with automatic detection and usage tracking
+- **Enhanced Settings**: Added image model selection (DALL-E 3/2) and premium feature controls
+
+### Database Schema Updates
+- Added premium plans, subscriptions, contact messages, admin users, and redeem codes tables
+- Implemented usage tracking for both chat and image generation
+- Added proper relationships and constraints for data integrity
+
+### New Pages and Components
+- `/pricing` - Premium plan pricing page with subscription management
+- `/contact` - Contact form with category selection and admin integration  
+- `/admin` - Administrative dashboard with analytics and management tools
+- Enhanced sidebar with premium features access (upgrade, contact, redeem codes)
+
 ## System Architecture
 
 ### Frontend Architecture
