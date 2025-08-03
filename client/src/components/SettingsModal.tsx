@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useChatContext } from "@/contexts/ChatContext";
 import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Settings,
   Brain,
@@ -81,6 +82,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const { theme, setTheme } = useChatContext();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
 
   // Fetch user settings
   const { data: userSettings, isLoading } = useQuery({
@@ -215,39 +217,78 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] p-0">
-        <div className="flex h-[80vh]">
-          {/* Navigation Sidebar */}
-          <div className="w-64 bg-muted/30 p-6 border-r">
-            <DialogHeader className="pb-6">
-              <DialogTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Settings
-              </DialogTitle>
-            </DialogHeader>
-            
-            <nav className="space-y-2">
-              {tabs.map((tab) => {
-                const IconComponent = tab.icon;
-                return (
-                  <Button
-                    key={tab.id}
-                    variant={activeTab === tab.id ? "secondary" : "ghost"}
-                    className="w-full justify-start"
-                    onClick={() => setActiveTab(tab.id as SettingsTab)}
-                  >
-                    <IconComponent className="h-4 w-4 mr-3" />
-                    {tab.label}
-                  </Button>
-                );
-              })}
-            </nav>
-          </div>
+      <DialogContent className={cn(
+        isMobile 
+          ? "max-w-[95vw] max-h-[95vh] p-0 w-[95vw] h-[95vh]" 
+          : "max-w-5xl max-h-[90vh] p-0"
+      )}>
+        <div className={cn(
+          isMobile 
+            ? "flex flex-col h-full" 
+            : "flex h-[80vh]"
+        )}>
+          {/* Navigation - Mobile: Horizontal tabs, Desktop: Sidebar */}
+          {isMobile ? (
+            <div className="bg-muted/30 border-b">
+              <DialogHeader className="px-4 py-3">
+                <DialogTitle className="flex items-center gap-2 text-lg">
+                  <Settings className="h-5 w-5" />
+                  Settings
+                </DialogTitle>
+              </DialogHeader>
+              
+              {/* Mobile tab navigation */}
+              <ScrollArea className="pb-2">
+                <div className="flex gap-1 px-4 pb-3">
+                  {tabs.map((tab) => {
+                    const IconComponent = tab.icon;
+                    return (
+                      <Button
+                        key={tab.id}
+                        variant={activeTab === tab.id ? "secondary" : "ghost"}
+                        className="flex-shrink-0 px-3 py-2 h-auto text-xs"
+                        onClick={() => setActiveTab(tab.id as SettingsTab)}
+                      >
+                        <IconComponent className="h-3 w-3 mr-1" />
+                        {tab.label.split(" ")[0]}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </div>
+          ) : (
+            <div className="w-64 bg-muted/30 p-6 border-r">
+              <DialogHeader className="pb-6">
+                <DialogTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Settings
+                </DialogTitle>
+              </DialogHeader>
+              
+              <nav className="space-y-2">
+                {tabs.map((tab) => {
+                  const IconComponent = tab.icon;
+                  return (
+                    <Button
+                      key={tab.id}
+                      variant={activeTab === tab.id ? "secondary" : "ghost"}
+                      className="w-full justify-start"
+                      onClick={() => setActiveTab(tab.id as SettingsTab)}
+                    >
+                      <IconComponent className="h-4 w-4 mr-3" />
+                      {tab.label}
+                    </Button>
+                  );
+                })}
+              </nav>
+            </div>
+          )}
 
           {/* Content Area */}
           <div className="flex-1 overflow-hidden">
             <ScrollArea className="h-full">
-              <div className="p-6">
+              <div className={cn(isMobile ? "p-4" : "p-6")}>
                 {/* General Settings */}
                 {activeTab === "general" && (
                   <div className="space-y-6">
@@ -265,26 +306,48 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                         <RadioGroup
                           value={settings.theme}
                           onValueChange={(value) => updateSetting("theme", value as any)}
-                          className="flex gap-6"
+                          className={cn(
+                            isMobile 
+                              ? "grid grid-cols-1 gap-4" 
+                              : "flex gap-6"
+                          )}
                         >
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="light" id="light" />
-                            <Label htmlFor="light" className="flex items-center gap-2">
-                              <Sun className="h-4 w-4" />
+                          <div className={cn(
+                            "flex items-center space-x-3",
+                            isMobile && "p-3 border rounded-lg hover:bg-accent/50"
+                          )}>
+                            <RadioGroupItem value="light" id="light" className={isMobile ? "h-5 w-5" : ""} />
+                            <Label htmlFor="light" className={cn(
+                              "flex items-center gap-2 cursor-pointer",
+                              isMobile && "text-base flex-1"
+                            )}>
+                              <Sun className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
                               Light
                             </Label>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="dark" id="dark" />
-                            <Label htmlFor="dark" className="flex items-center gap-2">
-                              <Moon className="h-4 w-4" />
+                          <div className={cn(
+                            "flex items-center space-x-3",
+                            isMobile && "p-3 border rounded-lg hover:bg-accent/50"
+                          )}>
+                            <RadioGroupItem value="dark" id="dark" className={isMobile ? "h-5 w-5" : ""} />
+                            <Label htmlFor="dark" className={cn(
+                              "flex items-center gap-2 cursor-pointer",
+                              isMobile && "text-base flex-1"
+                            )}>
+                              <Moon className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
                               Dark
                             </Label>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="auto" id="auto" />
-                            <Label htmlFor="auto" className="flex items-center gap-2">
-                              <Monitor className="h-4 w-4" />
+                          <div className={cn(
+                            "flex items-center space-x-3",
+                            isMobile && "p-3 border rounded-lg hover:bg-accent/50"
+                          )}>
+                            <RadioGroupItem value="auto" id="auto" className={isMobile ? "h-5 w-5" : ""} />
+                            <Label htmlFor="auto" className={cn(
+                              "flex items-center gap-2 cursor-pointer",
+                              isMobile && "text-base flex-1"
+                            )}>
+                              <Monitor className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
                               Auto
                             </Label>
                           </div>
@@ -353,7 +416,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                           value={settings.defaultModel}
                           onValueChange={(value) => updateSetting("defaultModel", value)}
                         >
-                          <SelectTrigger className="w-64">
+                          <SelectTrigger className={cn(
+                            isMobile ? "w-full h-12 text-base" : "w-64"
+                          )}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -379,9 +444,14 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                           max={100}
                           min={0}
                           step={5}
-                          className="w-64"
+                          className={cn(
+                            isMobile ? "w-full" : "w-64"
+                          )}
                         />
-                        <div className="flex justify-between text-xs text-muted-foreground mt-1 w-64">
+                        <div className={cn(
+                          "flex justify-between text-xs text-muted-foreground mt-1",
+                          isMobile ? "w-full" : "w-64"
+                        )}>
                           <span>Focused (0.0)</span>
                           <span>Creative (1.0)</span>
                         </div>
@@ -401,7 +471,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                           max={4096}
                           min={256}
                           step={256}
-                          className="w-64"
+                          className={cn(
+                            isMobile ? "w-full" : "w-64"
+                          )}
                         />
                       </div>
 
@@ -409,9 +481,15 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
                       {/* Feature Toggles */}
                       <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <Label className="text-base font-medium">Streaming Responses</Label>
+                        <div className={cn(
+                          "flex items-center justify-between",
+                          isMobile && "p-3 border rounded-lg"
+                        )}>
+                          <div className="flex-1">
+                            <Label className={cn(
+                              "text-base font-medium",
+                              isMobile && "text-lg"
+                            )}>Streaming Responses</Label>
                             <p className="text-sm text-muted-foreground">
                               Show responses as they're generated
                             </p>
@@ -419,12 +497,19 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                           <Switch
                             checked={settings.streamingEnabled}
                             onCheckedChange={(checked) => updateSetting("streamingEnabled", checked)}
+                            className={isMobile ? "scale-125" : ""}
                           />
                         </div>
 
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <Label className="text-base font-medium">Code Rendering</Label>
+                        <div className={cn(
+                          "flex items-center justify-between",
+                          isMobile && "p-3 border rounded-lg"
+                        )}>
+                          <div className="flex-1">
+                            <Label className={cn(
+                              "text-base font-medium",
+                              isMobile && "text-lg"
+                            )}>Code Rendering</Label>
                             <p className="text-sm text-muted-foreground">
                               Enable syntax highlighting for code
                             </p>
@@ -432,12 +517,19 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                           <Switch
                             checked={settings.codeRenderingEnabled}
                             onCheckedChange={(checked) => updateSetting("codeRenderingEnabled", checked)}
+                            className={isMobile ? "scale-125" : ""}
                           />
                         </div>
 
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <Label className="text-base font-medium">Markdown & LaTeX</Label>
+                        <div className={cn(
+                          "flex items-center justify-between",
+                          isMobile && "p-3 border rounded-lg"
+                        )}>
+                          <div className="flex-1">
+                            <Label className={cn(
+                              "text-base font-medium",
+                              isMobile && "text-lg"
+                            )}>Markdown & LaTeX</Label>
                             <p className="text-sm text-muted-foreground">
                               Render formatted text and mathematical expressions
                             </p>
@@ -445,6 +537,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                           <Switch
                             checked={settings.markdownEnabled}
                             onCheckedChange={(checked) => updateSetting("markdownEnabled", checked)}
+                            className={isMobile ? "scale-125" : ""}
                           />
                         </div>
                       </div>
@@ -596,24 +689,33 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                         <p className="text-sm text-muted-foreground mb-3">
                           Your API key is stored securely and never shared
                         </p>
-                        <div className="relative w-96">
+                        <div className={cn(
+                          "relative",
+                          isMobile ? "w-full" : "w-96"
+                        )}>
                           <Input
                             type={showApiKey ? "text" : "password"}
                             value={settings.openaiApiKey || ""}
                             onChange={(e) => updateSetting("openaiApiKey", e.target.value)}
                             placeholder="sk-..."
-                            className="pr-10"
+                            className={cn(
+                              "pr-10",
+                              isMobile && "h-12 text-base"
+                            )}
                           />
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="absolute right-0 top-0 h-full"
+                            className={cn(
+                              "absolute right-0 top-0 h-full",
+                              isMobile && "h-12 w-12"
+                            )}
                             onClick={() => setShowApiKey(!showApiKey)}
                           >
                             {showApiKey ? (
-                              <EyeOff className="h-4 w-4" />
+                              <EyeOff className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
                             ) : (
-                              <Eye className="h-4 w-4" />
+                              <Eye className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
                             )}
                           </Button>
                         </div>
@@ -655,20 +757,42 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             </ScrollArea>
 
             {/* Footer */}
-            <div className="border-t bg-muted/30 p-6">
-              <div className="flex justify-between items-center">
+            <div className={cn(
+              "border-t bg-muted/30",
+              isMobile ? "p-4" : "p-6"
+            )}>
+              <div className={cn(
+                isMobile 
+                  ? "flex flex-col gap-3" 
+                  : "flex justify-between items-center"
+              )}>
                 {hasUnsavedChanges && (
-                  <p className="text-sm text-muted-foreground">
+                  <p className={cn(
+                    "text-sm text-muted-foreground",
+                    isMobile && "text-center"
+                  )}>
                     You have unsaved changes
                   </p>
                 )}
-                <div className="flex gap-3 ml-auto">
-                  <Button variant="outline" onClick={handleCancel}>
+                <div className={cn(
+                  "flex gap-3",
+                  isMobile ? "w-full" : "ml-auto"
+                )}>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleCancel}
+                    className={cn(
+                      isMobile && "flex-1 h-12 text-base"
+                    )}
+                  >
                     Cancel
                   </Button>
                   <Button
                     onClick={handleSave}
                     disabled={!hasUnsavedChanges || saveSettingsMutation.isPending}
+                    className={cn(
+                      isMobile && "flex-1 h-12 text-base"
+                    )}
                   >
                     {saveSettingsMutation.isPending ? "Saving..." : "Save Changes"}
                   </Button>
