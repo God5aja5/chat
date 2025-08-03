@@ -1,0 +1,326 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(20, 14.3%, 4.1%);
+  --muted: hsl(60, 4.8%, 95.9%);
+  --muted-foreground: hsl(25, 5.3%, 44.7%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(20, 14.3%, 4.1%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(20, 14.3%, 4.1%);
+  --border: hsl(20, 5.9%, 90%);
+  --input: hsl(20, 5.9%, 90%);
+  --primary: hsl(142, 76%, 36%);
+  --primary-foreground: hsl(355, 100%, 99%);
+  --secondary: hsl(60, 4.8%, 95.9%);
+  --secondary-foreground: hsl(24, 9.8%, 10%);
+  --accent: hsl(60, 4.8%, 95.9%);
+  --accent-foreground: hsl(24, 9.8%, 10%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(60, 9.1%, 97.8%);
+  --ring: hsl(20, 14.3%, 4.1%);
+  --radius: 0.5rem;
+  
+  /* ChatGPT specific colors */
+  --chatgpt-green: hsl(142, 76%, 36%);
+  --chatgpt-green-hover: hsl(142, 76%, 32%);
+  --light-border: hsl(20, 5.9%, 90%);
+}
+
+.dark {
+  --background: hsl(240, 10%, 3.9%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 3.7%, 15.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --popover: hsl(240, 10%, 3.9%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 3.9%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 3.7%, 15.9%);
+  --input: hsl(240, 3.7%, 15.9%);
+  --primary: hsl(142, 76%, 36%);
+  --primary-foreground: hsl(355, 100%, 99%);
+  --secondary: hsl(240, 3.7%, 15.9%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(240, 3.7%, 15.9%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(240, 4.9%, 83.9%);
+  
+  /* Dark mode ChatGPT colors */
+  --chatgpt-green: hsl(142, 76%, 36%);
+  --chatgpt-green-hover: hsl(142, 76%, 40%);
+  --dark-bg: hsl(240, 10%, 13%);
+  --dark-surface: hsl(240, 7%, 18%);
+  --dark-border: hsl(240, 3.7%, 15.9%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  /* Message animations */
+  .message-fade-in {
+    animation: fadeInUp 0.3s ease-out;
+  }
+  
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Typing indicator animation */
+  .typing-indicator {
+    animation: pulse 1.5s infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+  
+  /* Code block styling */
+  .code-block {
+    background: hsl(240, 10%, 8%);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  .dark .code-block {
+    background: hsl(240, 10%, 8%);
+  }
+  
+  /* Sidebar item hover effects */
+  .sidebar-item {
+    transition: all 0.2s ease;
+  }
+  
+  .sidebar-item:hover {
+    background-color: hsl(var(--muted));
+  }
+  
+  /* Smooth scrolling for chat messages */
+  .scroll-smooth {
+    scroll-behavior: smooth;
+  }
+  
+  /* Custom scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+  
+  /* Message content styling */
+  .prose {
+    max-width: none;
+  }
+  
+  .prose pre {
+    background: hsl(240, 10%, 8%) !important;
+    border: 1px solid hsl(var(--border));
+  }
+  
+  .prose code {
+    background: hsl(var(--muted));
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.25rem;
+    font-size: 0.875em;
+  }
+  
+  .prose pre code {
+    background: transparent;
+    padding: 0;
+  }
+  
+  /* Dark mode prose adjustments */
+  .dark .prose {
+    color: hsl(var(--foreground));
+  }
+  
+  .dark .prose h1,
+  .dark .prose h2,
+  .dark .prose h3,
+  .dark .prose h4,
+  .dark .prose h5,
+  .dark .prose h6 {
+    color: hsl(var(--foreground));
+  }
+  
+  .dark .prose strong {
+    color: hsl(var(--foreground));
+  }
+  
+  .dark .prose code {
+    color: hsl(var(--foreground));
+    background: hsl(var(--muted));
+  }
+  
+  .dark .prose pre {
+    background: hsl(240, 10%, 8%) !important;
+    color: hsl(var(--foreground));
+  }
+  
+  .dark .prose blockquote {
+    color: hsl(var(--muted-foreground));
+    border-left-color: hsl(var(--border));
+  }
+  
+  /* Button focus styles */
+  .focus-visible:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+  
+  /* Loading spinner */
+  .animate-spin-slow {
+    animation: spin 2s linear infinite;
+  }
+  
+  /* Gradient backgrounds */
+  .gradient-bg {
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--secondary) / 0.1));
+  }
+  
+  /* Glass morphism effect */
+  .glass-effect {
+    background: hsl(var(--background) / 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid hsl(var(--border) / 0.5);
+  }
+  
+  /* ChatGPT specific styles */
+  .chatgpt-green {
+    color: hsl(var(--chatgpt-green));
+  }
+  
+  .bg-chatgpt-green {
+    background-color: hsl(var(--chatgpt-green));
+  }
+  
+  .hover\:bg-chatgpt-green-hover:hover {
+    background-color: hsl(var(--chatgpt-green-hover));
+  }
+  
+  .border-chatgpt-green {
+    border-color: hsl(var(--chatgpt-green));
+  }
+  
+  /* Message bubble styles */
+  .message-bubble {
+    position: relative;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    max-width: calc(100% - 3rem);
+  }
+  
+  .message-bubble-user {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    margin-left: auto;
+  }
+  
+  .message-bubble-assistant {
+    background: hsl(var(--muted));
+    color: hsl(var(--foreground));
+  }
+  
+  /* Responsive design helpers */
+  @media (max-width: 768px) {
+    .mobile-hide {
+      display: none;
+    }
+    
+    .mobile-full {
+      width: 100%;
+    }
+  }
+  
+  /* Print styles */
+  @media print {
+    .no-print {
+      display: none !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* Custom utilities */
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .text-pretty {
+    text-wrap: pretty;
+  }
+  
+  /* Animation delays */
+  .delay-75 {
+    animation-delay: 75ms;
+  }
+  
+  .delay-100 {
+    animation-delay: 100ms;
+  }
+  
+  .delay-150 {
+    animation-delay: 150ms;
+  }
+  
+  .delay-200 {
+    animation-delay: 200ms;
+  }
+  
+  .delay-300 {
+    animation-delay: 300ms;
+  }
+  
+  .delay-500 {
+    animation-delay: 500ms;
+  }
+  
+  .delay-700 {
+    animation-delay: 700ms;
+  }
+  
+  .delay-1000 {
+    animation-delay: 1000ms;
+  }
+}
