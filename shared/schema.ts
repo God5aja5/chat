@@ -1,209 +1,208 @@
 import { relations, sql } from "drizzle-orm";
 import {
   index,
-  jsonb,
-  pgTable,
   text,
-  timestamp,
-  varchar,
-  boolean,
   integer,
-} from "drizzle-orm/pg-core";
+  real,
+  sqliteTable,
+} from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Session storage table.
 // (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
-export const sessions = pgTable(
+export const sessions = sqliteTable(
   "sessions",
   {
-    sid: varchar("sid").primaryKey(),
-    sess: jsonb("sess").notNull(),
-    expire: timestamp("expire").notNull(),
+    sid: text("sid").primaryKey(),
+    sess: text("sess").notNull(), // JSON stored as text
+    expire: integer("expire").notNull(), // Unix timestamp
   },
-  (table) => [index("IDX_session_expire").on(table.expire)]
+  (table) => ({
+    expireIdx: index("IDX_session_expire").on(table.expire)
+  })
 );
 
 // User storage table.
 // (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique(),
-  firstName: varchar("first_name"),
-  lastName: varchar("last_name"),
-  profileImageUrl: varchar("profile_image_url"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+export const users = sqliteTable("users", {
+  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+  email: text("email").unique(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  profileImageUrl: text("profile_image_url"),
+  createdAt: integer("created_at").default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at").default(sql`(unixepoch())`),
 });
 
 // Chat conversations
-export const chats = pgTable("chats", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+export const chats = sqliteTable("chats", {
+  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
-  model: varchar("model").notNull().default("gpt-4o"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  model: text("model").notNull().default("gpt-4o"),
+  createdAt: integer("created_at").default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at").default(sql`(unixepoch())`),
 });
 
 // Chat messages
-export const messages = pgTable("messages", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  chatId: varchar("chat_id").notNull().references(() => chats.id, { onDelete: "cascade" }),
-  role: varchar("role").notNull(), // "user" | "assistant" | "system"
+export const messages = sqliteTable("messages", {
+  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+  chatId: text("chat_id").notNull().references(() => chats.id, { onDelete: "cascade" }),
+  role: text("role").notNull(), // "user" | "assistant" | "system"
   content: text("content").notNull(),
-  timestamp: timestamp("timestamp").defaultNow(),
+  timestamp: integer("timestamp").default(sql`(unixepoch())`),
   tokens: integer("tokens"),
-  isEdited: boolean("is_edited").default(false),
+  isEdited: integer("is_edited", { mode: "boolean" }).default(false),
 });
 
 // File uploads
-export const files = pgTable("files", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  chatId: varchar("chat_id").notNull().references(() => chats.id, { onDelete: "cascade" }),
-  messageId: varchar("message_id").references(() => messages.id, { onDelete: "cascade" }),
+export const files = sqliteTable("files", {
+  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+  chatId: text("chat_id").notNull().references(() => chats.id, { onDelete: "cascade" }),
+  messageId: text("message_id").references(() => messages.id, { onDelete: "cascade" }),
   fileName: text("file_name").notNull(),
   fileSize: integer("file_size").notNull(),
-  mimeType: varchar("mime_type").notNull(),
+  mimeType: text("mime_type").notNull(),
   filePath: text("file_path").notNull(),
-  uploadedAt: timestamp("uploaded_at").defaultNow(),
+  uploadedAt: integer("uploaded_at").default(sql`(unixepoch())`),
 });
 
 // User settings
-export const userSettings = pgTable("user_settings", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
-  theme: varchar("theme").default("auto"), // "light" | "dark" | "auto"
-  defaultModel: varchar("default_model").default("gpt-4o"),
-  defaultImageModel: varchar("default_image_model").default("dall-e-3"), // DALL-E model for images
+export const userSettings = sqliteTable("user_settings", {
+  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
+  theme: text("theme").default("auto"), // "light" | "dark" | "auto"
+  defaultModel: text("default_model").default("gpt-4o"),
+  defaultImageModel: text("default_image_model").default("dall-e-3"), // DALL-E model for images
   temperature: integer("temperature").default(70), // 0-100
   maxTokens: integer("max_tokens").default(2048),
-  streamingEnabled: boolean("streaming_enabled").default(true),
-  codeRenderingEnabled: boolean("code_rendering_enabled").default(true),
-  markdownEnabled: boolean("markdown_enabled").default(true),
-  preventCodeOverwrites: boolean("prevent_code_overwrites").default(true),
-  showLineAnnotations: boolean("show_line_annotations").default(false),
-  showDiffViewer: boolean("show_diff_viewer").default(true),
+  streamingEnabled: integer("streaming_enabled", { mode: "boolean" }).default(true),
+  codeRenderingEnabled: integer("code_rendering_enabled", { mode: "boolean" }).default(true),
+  markdownEnabled: integer("markdown_enabled", { mode: "boolean" }).default(true),
+  preventCodeOverwrites: integer("prevent_code_overwrites", { mode: "boolean" }).default(true),
+  showLineAnnotations: integer("show_line_annotations", { mode: "boolean" }).default(false),
+  showDiffViewer: integer("show_diff_viewer", { mode: "boolean" }).default(true),
   openaiApiKey: text("openai_api_key"), // encrypted
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: integer("created_at").default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at").default(sql`(unixepoch())`),
 });
 
 // Artifacts (code generations, files, etc.)
-export const artifacts = pgTable("artifacts", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  chatId: varchar("chat_id").notNull().references(() => chats.id, { onDelete: "cascade" }),
-  messageId: varchar("message_id").references(() => messages.id, { onDelete: "cascade" }),
+export const artifacts = sqliteTable("artifacts", {
+  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+  chatId: text("chat_id").notNull().references(() => chats.id, { onDelete: "cascade" }),
+  messageId: text("message_id").references(() => messages.id, { onDelete: "cascade" }),
   fileName: text("file_name").notNull(),
   content: text("content").notNull(),
   version: integer("version").notNull().default(1),
-  type: varchar("type").notNull(), // "code" | "document" | "image"
-  language: varchar("language"), // for code artifacts
-  linkedArtifactId: varchar("linked_artifact_id"), // for versions
-  createdAt: timestamp("created_at").defaultNow(),
+  type: text("type").notNull(), // "code" | "document" | "image"
+  language: text("language"), // for code artifacts
+  linkedArtifactId: text("linked_artifact_id"), // for versions
+  createdAt: integer("created_at").default(sql`(unixepoch())`),
 });
 
 // Premium Plans
-export const plans = pgTable("plans", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: varchar("name").notNull(),
+export const plans = sqliteTable("plans", {
+  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+  name: text("name").notNull(),
   price: integer("price").notNull(), // in cents
-  duration: varchar("duration").notNull(), // "monthly" | "yearly"
-  features: text("features").array().notNull(),
+  duration: text("duration").notNull(), // "monthly" | "yearly"
+  features: text("features").notNull(), // JSON string array
   chatLimit: integer("chat_limit"), // null = unlimited
   imageLimit: integer("image_limit"), // null = unlimited
   dailyLimit: integer("daily_limit"), // for free plan
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
+  isActive: integer("is_active", { mode: "boolean" }).default(true),
+  createdAt: integer("created_at").default(sql`(unixepoch())`),
 });
 
 // User Subscriptions
-export const subscriptions = pgTable("subscriptions", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  planId: varchar("plan_id").notNull().references(() => plans.id),
-  status: varchar("status").notNull().default("active"), // "active" | "expired" | "cancelled"
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+export const subscriptions = sqliteTable("subscriptions", {
+  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  planId: text("plan_id").notNull().references(() => plans.id),
+  status: text("status").notNull().default("active"), // "active" | "expired" | "cancelled"
+  expiresAt: integer("expires_at").notNull(),
+  createdAt: integer("created_at").default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at").default(sql`(unixepoch())`),
 });
 
 // Redeem Codes
-export const redeemCodes = pgTable("redeem_codes", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  code: varchar("code").notNull().unique(),
-  planId: varchar("plan_id").notNull().references(() => plans.id),
+export const redeemCodes = sqliteTable("redeem_codes", {
+  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+  code: text("code").notNull().unique(),
+  planId: text("plan_id").notNull().references(() => plans.id),
   duration: integer("duration").notNull(), // in months
-  durationType: varchar("duration_type").notNull().default("months"), // "months" | "years"
-  isUsed: boolean("is_used").default(false),
-  usedBy: varchar("used_by").references(() => users.id),
-  usedAt: timestamp("used_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-  expiresAt: timestamp("expires_at"),
+  durationType: text("duration_type").notNull().default("months"), // "months" | "years"
+  isUsed: integer("is_used", { mode: "boolean" }).default(false),
+  usedBy: text("used_by").references(() => users.id),
+  usedAt: integer("used_at"),
+  createdAt: integer("created_at").default(sql`(unixepoch())`),
+  expiresAt: integer("expires_at"),
 });
 
 // Contact Messages
-export const contactMessages = pgTable("contact_messages", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  ticketNumber: varchar("ticket_number").notNull().unique(),
-  name: varchar("name").notNull(),
-  email: varchar("email").notNull(),
-  subject: varchar("subject").notNull(),
+export const contactMessages = sqliteTable("contact_messages", {
+  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+  ticketNumber: text("ticket_number").notNull().unique(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  subject: text("subject").notNull(),
   message: text("message").notNull(),
-  category: varchar("category").notNull().default("general-inquiry"),
-  priority: varchar("priority").default("medium"), // "low" | "medium" | "high" | "urgent"
-  status: varchar("status").default("open"), // "open" | "in-progress" | "replied" | "closed"
+  category: text("category").notNull().default("general-inquiry"),
+  priority: text("priority").default("medium"), // "low" | "medium" | "high" | "urgent"
+  status: text("status").default("open"), // "open" | "in-progress" | "replied" | "closed"
   adminReply: text("admin_reply"),
-  userId: varchar("user_id"), // Optional - for logged in users
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-  repliedAt: timestamp("replied_at"),
+  userId: text("user_id"), // Optional - for logged in users
+  createdAt: integer("created_at").default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at").default(sql`(unixepoch())`),
+  repliedAt: integer("replied_at"),
 });
 
 // Usage Tracking
-export const usageTracking = pgTable("usage_tracking", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  type: varchar("type").notNull(), // "chat" | "image" | "token"
+export const usageTracking = sqliteTable("usage_tracking", {
+  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: text("type").notNull(), // "chat" | "image" | "token"
   count: integer("count").notNull().default(1),
-  date: timestamp("date").defaultNow(),
+  date: integer("date").default(sql`(unixepoch())`),
 });
 
 // Admin Users
-export const adminUsers = pgTable("admin_users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: varchar("username").notNull().unique(),
-  password: varchar("password").notNull(), // hashed
-  role: varchar("role").default("admin"),
-  lastLogin: timestamp("last_login"),
-  createdAt: timestamp("created_at").defaultNow(),
+export const adminUsers = sqliteTable("admin_users", {
+  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(), // hashed
+  role: text("role").default("admin"),
+  lastLogin: integer("last_login"),
+  createdAt: integer("created_at").default(sql`(unixepoch())`),
 });
 
 // Model Capabilities
-export const modelCapabilities = pgTable("model_capabilities", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  modelName: varchar("model_name").notNull().unique(),
-  displayName: varchar("display_name").notNull(),
-  supportsText: boolean("supports_text").default(true),
-  supportsImageInput: boolean("supports_image_input").default(false),
-  supportsAudioInput: boolean("supports_audio_input").default(false),
-  supportsImageOutput: boolean("supports_image_output").default(false),
-  supportsAudioOutput: boolean("supports_audio_output").default(false),
-  supportsWebSearch: boolean("supports_web_search").default(false),
-  supportsFileUpload: boolean("supports_file_upload").default(false),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+export const modelCapabilities = sqliteTable("model_capabilities", {
+  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+  modelName: text("model_name").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  supportsText: integer("supports_text", { mode: "boolean" }).default(true),
+  supportsImageInput: integer("supports_image_input", { mode: "boolean" }).default(false),
+  supportsAudioInput: integer("supports_audio_input", { mode: "boolean" }).default(false),
+  supportsImageOutput: integer("supports_image_output", { mode: "boolean" }).default(false),
+  supportsAudioOutput: integer("supports_audio_output", { mode: "boolean" }).default(false),
+  supportsWebSearch: integer("supports_web_search", { mode: "boolean" }).default(false),
+  supportsFileUpload: integer("supports_file_upload", { mode: "boolean" }).default(false),
+  isActive: integer("is_active", { mode: "boolean" }).default(true),
+  createdAt: integer("created_at").default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at").default(sql`(unixepoch())`),
 });
 
 // Database Backups
-export const databaseBackups = pgTable("database_backups", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  fileName: varchar("file_name").notNull(),
+export const databaseBackups = sqliteTable("database_backups", {
+  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+  fileName: text("file_name").notNull(),
   fileSize: integer("file_size").notNull(),
-  filePath: varchar("file_path").notNull(),
-  backupType: varchar("backup_type").notNull().default("full"), // "full" | "incremental"
-  createdAt: timestamp("created_at").defaultNow(),
+  filePath: text("file_path").notNull(),
+  backupType: text("backup_type").notNull().default("full"), // "full" | "incremental"
+  createdAt: integer("created_at").default(sql`(unixepoch())`),
 });
 
 // Relations

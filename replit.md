@@ -10,6 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (January 2025)
 
+### Database Migration to SQLite (August 2025)
+- **Complete Database Conversion**: Migrated from PostgreSQL/Neon to SQLite for simplified deployment
+- **Schema Updates**: Converted all PostgreSQL tables to SQLite format with proper data type mappings
+- **Session Management**: Replaced PostgreSQL session store with in-memory session store using memorystore
+- **Cache System**: Removed Redis dependency, using pure in-memory caching service
+- **Data Compatibility**: Added JSON string conversion for array fields (features in plans table)
+- **Timestamp Handling**: Updated all timestamp fields to use Unix timestamps compatible with SQLite
+
 ### Premium Features Implementation
 - **Premium Subscription System**: Added comprehensive premium plans ($8 Basic, $15 Pro) with usage tracking and limits
 - **Admin Panel**: Complete admin dashboard with user management, subscription tracking, and contact message handling
@@ -19,6 +27,7 @@ Preferred communication style: Simple, everyday language.
 - **Enhanced Settings**: Added image model selection (DALL-E 3/2) and premium feature controls
 
 ### Database Schema Updates
+- **SQLite Implementation**: All tables now use SQLite-compatible syntax and data types
 - Added premium plans, subscriptions, contact messages, admin users, and redeem codes tables
 - Implemented usage tracking for both chat and image generation
 - Added proper relationships and constraints for data integrity
@@ -47,10 +56,11 @@ Preferred communication style: Simple, everyday language.
 - **Development**: Hot module replacement and error overlay for development experience
 
 ### Database & Storage
-- **Database**: PostgreSQL with Neon serverless database hosting
-- **ORM**: Drizzle ORM for type-safe database operations and migrations
-- **Schema Management**: Centralized schema definitions in shared directory
-- **Session Storage**: PostgreSQL-based session store using connect-pg-simple
+- **Database**: SQLite with local file storage (database.db)
+- **ORM**: Drizzle ORM for type-safe database operations with SQLite adapter
+- **Schema Management**: Centralized schema definitions in shared directory with SQLite syntax
+- **Session Storage**: In-memory session store using memorystore for development
+- **Cache System**: In-memory caching service (Redis removed for simplicity)
 
 ### Authentication & Authorization
 - **Provider**: Replit Authentication (OIDC-based) for seamless integration
@@ -102,9 +112,9 @@ Preferred communication style: Simple, everyday language.
 - **Express Session**: Session management with PostgreSQL store
 
 ### Database & ORM
-- **Drizzle ORM**: Type-safe ORM for PostgreSQL with migration support
-- **Neon Database**: Serverless PostgreSQL database hosting
-- **PostgreSQL**: Primary database with WebSocket support via ws library
+- **Drizzle ORM**: Type-safe ORM for SQLite with schema management
+- **SQLite**: Local database with better-sqlite3 for improved performance
+- **Local Storage**: File-based database storage for simplified deployment
 
 ### AI & External APIs
 - **OpenAI**: Official OpenAI SDK for chat completions and streaming

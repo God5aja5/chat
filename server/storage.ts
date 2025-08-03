@@ -155,7 +155,7 @@ export class DatabaseStorage implements IStorage {
         target: users.id,
         set: {
           ...userData,
-          updatedAt: new Date(),
+          updatedAt: Math.floor(Date.now() / 1000), // Unix timestamp for SQLite
         },
       })
       .returning();
@@ -374,28 +374,55 @@ export class DatabaseStorage implements IStorage {
   
   // Premium plan operations
   async getPlans(): Promise<Plan[]> {
-    return await db
+    const rawPlans = await db
       .select()
       .from(plans)
       .where(eq(plans.isActive, true))
       .orderBy(plans.price);
+    
+    // Convert features from JSON string to array
+    return rawPlans.map(plan => ({
+      ...plan,
+      features: typeof plan.features === 'string' ? JSON.parse(plan.features) : plan.features
+    }));
   }
 
   async createPlan(data: InsertPlan): Promise<Plan> {
+    // Convert features array to JSON string for SQLite
+    const planData = {
+      ...data,
+      features: typeof data.features === 'string' ? data.features : JSON.stringify(data.features)
+    };
+    
     const [plan] = await db
       .insert(plans)
-      .values(data)
+      .values(planData)
       .returning();
-    return plan;
+    
+    // Convert features back to array when returning
+    return {
+      ...plan,
+      features: typeof plan.features === 'string' ? JSON.parse(plan.features) : plan.features
+    };
   }
 
   async updatePlan(planId: string, data: Partial<InsertPlan>): Promise<Plan> {
+    // Convert features array to JSON string for SQLite if provided
+    const updateData = data.features 
+      ? { ...data, features: typeof data.features === 'string' ? data.features : JSON.stringify(data.features) }
+      : data;
+    
     const [plan] = await db
       .update(plans)
-      .set(data)
+      .set(updateData)
       .where(eq(plans.id, planId))
       .returning();
-    return plan;
+    
+    // Convert features back to array when returning
+    return {
+      ...plan,
+      features: typeof plan.features === 'string' ? JSON.parse(plan.features) : plan.features
+    };
   }
 
   async deletePlan(planId: string): Promise<void> {

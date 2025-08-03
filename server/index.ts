@@ -4,6 +4,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { initializeData } from "./init-data";
 import { initializeModelCapabilities } from "./init-models";
 import { initRedis } from "./redis";
+import { initializeDatabase } from "./init-db";
 
 const app = express();
 app.use(express.json());
@@ -42,6 +43,9 @@ app.use((req, res, next) => {
 (async () => {
   // Initialize Redis cache service
   await initRedis();
+  
+  // Initialize SQLite database tables
+  await initializeDatabase();
   
   // Initialize default data (plans and admin user)
   await initializeData();
