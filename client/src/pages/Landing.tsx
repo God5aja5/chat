@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { useTheme } from "@/hooks/useTheme";
+import { AuthModal } from "@/components/AuthModal";
 import {
   Bot,
   MessageSquare,
@@ -28,6 +29,7 @@ import {
 export default function Landing() {
   const { isLoading } = useAuth();
   const { theme, setTheme, actualTheme } = useTheme();
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   if (isLoading) {
     return (
@@ -78,7 +80,7 @@ export default function Landing() {
   ];
 
   const handleGetStarted = () => {
-    window.location.href = "/api/login";
+    setShowAuthModal(true);
   };
 
   const handleThemeToggle = () => {
@@ -314,6 +316,9 @@ export default function Landing() {
             </div>
           </div>
         </footer>
+        
+        {/* Authentication Modal */}
+        <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
       </div>
     </ThemeProvider>
   );

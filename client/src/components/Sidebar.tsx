@@ -23,6 +23,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useChatContext } from "@/contexts/ChatContext";
 import { apiRequest } from "@/lib/queryClient";
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { cn } from "@/lib/utils";
 import {
   Plus,
@@ -56,6 +57,7 @@ export function Sidebar({ isOpen, onToggle, onSettingsOpen, className }: Sidebar
   const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { signOut } = useFirebaseAuth();
 
   // Fetch user's chats
   const { data: chats = [], isLoading } = useQuery({
@@ -348,7 +350,7 @@ export function Sidebar({ isOpen, onToggle, onSettingsOpen, className }: Sidebar
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => window.location.href = "/api/logout"}>
+                <DropdownMenuItem onClick={signOut}>
                   Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
