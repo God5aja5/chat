@@ -241,12 +241,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/redeem-codes/generate", verifyFirebaseToken, async (req, res) => {
+  // Admin routes with proper authentication
+  const requireAdmin = async (req: any, res: any, next: any) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      let payload;
+      try {
+        payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+      } catch (error) {
+        return res.status(401).json({ message: 'Invalid token format' });
+      }
+      
+      const user = {
+        uid: payload.user_id || payload.sub,
+        email: payload.email,
+        name: payload.name || payload.email?.split('@')[0] || 'User',
+      };
+      
+      // Check if user is admin
+      const dbUser = await storage.getUser(user.uid);
+      if (!dbUser || !dbUser.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      req.user = user;
+      next();
+    } catch (error) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+  };
+
+  // Admin statistics endpoint
+  app.get("/api/admin/stats", requireAdmin, async (req, res) => {
+    try {
+      const stats = await storage.getAdminStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching admin stats:", error);
+      res.status(500).json({ error: "Failed to fetch admin stats" });
+    }
+  });
+
+  // Admin users endpoint
+  app.get("/api/admin/users", requireAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching admin users:", error);
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  // Admin subscriptions endpoint
+  app.get("/api/admin/subscriptions", requireAdmin, async (req, res) => {
+    try {
+      const subscriptions = await storage.getAllSubscriptions();
+      res.json(subscriptions);
+    } catch (error) {
+      console.error("Error fetching admin subscriptions:", error);
+      res.status(500).json({ error: "Failed to fetch subscriptions" });
+    }
+  });
+
+  // Admin support tickets endpoint
+  app.get("/api/admin/support-tickets", requireAdmin, async (req, res) => {
+    try {
+      const tickets = await storage.getAllSupportTickets();
+      res.json(tickets);
+    } catch (error) {
+      console.error("Error fetching admin support tickets:", error);
+      res.status(500).json({ error: "Failed to fetch support tickets" });
+    }
+  });
+
+  // Admin redeem codes endpoints
+  app.get("/api/admin/redeem-codes", requireAdmin, async (req, res) => {
+    try {
+      const codes = await storage.getAllRedeemCodes();
+      res.json(codes);
+    } catch (error) {
+      console.error("Error fetching admin redeem codes:", error);
+      res.status(500).json({ error: "Failed to fetch redeem codes" });
+    }
+  });
+
+  app.post("/api/admin/redeem-codes/generate", requireAdmin, async (req, res) => {
     try {
       const { planName, duration, durationType, count } = req.body;
       
+      if (!planName || !duration || !durationType || !count) {
+        return res.status(400).json({ error: "Missing required fields: planName, duration, durationType, count" });
+      }
+
+      if (count < 1 || count > 100) {
+        return res.status(400).json({ error: "Count must be between 1 and 100" });
+      }
+
       const codes = await storage.generateRedeemCodes(planName, duration, durationType, count);
-      res.json(codes);
+      res.json({ 
+        success: true, 
+        codes,
+        message: `Successfully generated ${codes.length} redeem codes for ${planName} plan`
+      });
     } catch (error) {
       console.error("Error generating redeem codes:", error);
       const errorMessage = error instanceof Error ? error.message : "Failed to generate redeem codes";

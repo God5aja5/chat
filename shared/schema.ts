@@ -4,107 +4,109 @@ import {
   text,
   integer,
   real,
-  sqliteTable,
-} from "drizzle-orm/sqlite-core";
+  boolean,
+  timestamp,
+  uuid,
+  pgTable,
+  serial,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Session storage table.
-// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
-export const sessions = sqliteTable(
+// Session storage table for Firebase auth sessions
+export const sessions = pgTable(
   "sessions",
   {
     sid: text("sid").primaryKey(),
     sess: text("sess").notNull(), // JSON stored as text
-    expire: integer("expire").notNull(), // Unix timestamp
+    expire: timestamp("expire").notNull(),
   },
   (table) => ({
     expireIdx: index("IDX_session_expire").on(table.expire)
   })
 );
 
-// User storage table.
-// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
-export const users = sqliteTable("users", {
-  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
-  email: text("email").unique(),
-  firstName: text("first_name"),
-  lastName: text("last_name"),
+// User storage table for Firebase users
+export const users = pgTable("users", {
+  id: text("id").primaryKey(), // Firebase UID
+  email: text("email").unique().notNull(),
+  name: text("name").notNull(),
   profileImageUrl: text("profile_image_url"),
-  createdAt: integer("created_at").default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at").default(sql`(unixepoch())`),
+  isAdmin: boolean("is_admin").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Chat conversations
-export const chats = sqliteTable("chats", {
-  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+export const chats = pgTable("chats", {
+  id: uuid("id").primaryKey().defaultRandom(),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   model: text("model").notNull().default("gpt-4o"),
-  createdAt: integer("created_at").default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at").default(sql`(unixepoch())`),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Chat messages
-export const messages = sqliteTable("messages", {
-  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
-  chatId: text("chat_id").notNull().references(() => chats.id, { onDelete: "cascade" }),
+export const messages = pgTable("messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  chatId: uuid("chat_id").notNull().references(() => chats.id, { onDelete: "cascade" }),
   role: text("role").notNull(), // "user" | "assistant" | "system"
   content: text("content").notNull(),
-  timestamp: integer("timestamp").default(sql`(unixepoch())`),
+  timestamp: timestamp("timestamp").defaultNow(),
   tokens: integer("tokens"),
-  isEdited: integer("is_edited", { mode: "boolean" }).default(false),
+  isEdited: boolean("is_edited").default(false),
 });
 
 // File uploads
-export const files = sqliteTable("files", {
-  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
-  chatId: text("chat_id").notNull().references(() => chats.id, { onDelete: "cascade" }),
-  messageId: text("message_id").references(() => messages.id, { onDelete: "cascade" }),
+export const files = pgTable("files", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  chatId: uuid("chat_id").notNull().references(() => chats.id, { onDelete: "cascade" }),
+  messageId: uuid("message_id").references(() => messages.id, { onDelete: "cascade" }),
   fileName: text("file_name").notNull(),
   fileSize: integer("file_size").notNull(),
   mimeType: text("mime_type").notNull(),
   filePath: text("file_path").notNull(),
-  uploadedAt: integer("uploaded_at").default(sql`(unixepoch())`),
+  uploadedAt: timestamp("uploaded_at").defaultNow(),
 });
 
 // User settings
-export const userSettings = sqliteTable("user_settings", {
-  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+export const userSettings = pgTable("user_settings", {
+  id: uuid("id").primaryKey().defaultRandom(),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
   theme: text("theme").default("auto"), // "light" | "dark" | "auto"
   defaultModel: text("default_model").default("gpt-4o"),
   defaultImageModel: text("default_image_model").default("dall-e-3"), // DALL-E model for images
   temperature: integer("temperature").default(70), // 0-100
   maxTokens: integer("max_tokens").default(2048),
-  streamingEnabled: integer("streaming_enabled", { mode: "boolean" }).default(true),
-  codeRenderingEnabled: integer("code_rendering_enabled", { mode: "boolean" }).default(true),
-  markdownEnabled: integer("markdown_enabled", { mode: "boolean" }).default(true),
-  preventCodeOverwrites: integer("prevent_code_overwrites", { mode: "boolean" }).default(true),
-  showLineAnnotations: integer("show_line_annotations", { mode: "boolean" }).default(false),
-  showDiffViewer: integer("show_diff_viewer", { mode: "boolean" }).default(true),
+  streamingEnabled: boolean("streaming_enabled").default(true),
+  codeRenderingEnabled: boolean("code_rendering_enabled").default(true),
+  markdownEnabled: boolean("markdown_enabled").default(true),
+  preventCodeOverwrites: boolean("prevent_code_overwrites").default(true),
+  showLineAnnotations: boolean("show_line_annotations").default(false),
+  showDiffViewer: boolean("show_diff_viewer").default(true),
   openaiApiKey: text("openai_api_key"), // encrypted
-  createdAt: integer("created_at").default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at").default(sql`(unixepoch())`),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Artifacts (code generations, files, etc.)
-export const artifacts = sqliteTable("artifacts", {
-  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
-  chatId: text("chat_id").notNull().references(() => chats.id, { onDelete: "cascade" }),
-  messageId: text("message_id").references(() => messages.id, { onDelete: "cascade" }),
+export const artifacts = pgTable("artifacts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  chatId: uuid("chat_id").notNull().references(() => chats.id, { onDelete: "cascade" }),
+  messageId: uuid("message_id").references(() => messages.id, { onDelete: "cascade" }),
   fileName: text("file_name").notNull(),
   content: text("content").notNull(),
   version: integer("version").notNull().default(1),
   type: text("type").notNull(), // "code" | "document" | "image"
   language: text("language"), // for code artifacts
-  linkedArtifactId: text("linked_artifact_id"), // for versions
-  createdAt: integer("created_at").default(sql`(unixepoch())`),
+  linkedArtifactId: uuid("linked_artifact_id"), // for versions
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Premium Plans
-export const plans = sqliteTable("plans", {
-  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+export const plans = pgTable("plans", {
+  id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   price: integer("price").notNull(), // in cents
   duration: text("duration").notNull(), // "monthly" | "yearly"
@@ -112,38 +114,38 @@ export const plans = sqliteTable("plans", {
   chatLimit: integer("chat_limit"), // null = unlimited
   imageLimit: integer("image_limit"), // null = unlimited
   dailyLimit: integer("daily_limit"), // for free plan
-  isActive: integer("is_active", { mode: "boolean" }).default(true),
-  createdAt: integer("created_at").default(sql`(unixepoch())`),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // User Subscriptions
-export const subscriptions = sqliteTable("subscriptions", {
-  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+export const subscriptions = pgTable("subscriptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  planId: text("plan_id").notNull().references(() => plans.id),
+  planId: uuid("plan_id").notNull().references(() => plans.id),
   status: text("status").notNull().default("active"), // "active" | "expired" | "cancelled"
-  expiresAt: integer("expires_at").notNull(),
-  createdAt: integer("created_at").default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at").default(sql`(unixepoch())`),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Redeem Codes
-export const redeemCodes = sqliteTable("redeem_codes", {
-  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+// Redeem Codes  
+export const redeemCodes = pgTable("redeem_codes", {
+  id: uuid("id").primaryKey().defaultRandom(),
   code: text("code").notNull().unique(),
-  planId: text("plan_id").notNull().references(() => plans.id),
+  planId: uuid("plan_id").notNull().references(() => plans.id),
   duration: integer("duration").notNull(), // in months
   durationType: text("duration_type").notNull().default("months"), // "months" | "years"
-  isUsed: integer("is_used", { mode: "boolean" }).default(false),
+  isUsed: boolean("is_used").default(false),
   usedBy: text("used_by").references(() => users.id),
-  usedAt: integer("used_at"),
-  createdAt: integer("created_at").default(sql`(unixepoch())`),
-  expiresAt: integer("expires_at"),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
 });
 
 // Contact Messages
-export const contactMessages = sqliteTable("contact_messages", {
-  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+export const contactMessages = pgTable("contact_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
   ticketNumber: text("ticket_number").notNull().unique(),
   name: text("name").notNull(),
   email: text("email").notNull(),
@@ -154,55 +156,55 @@ export const contactMessages = sqliteTable("contact_messages", {
   status: text("status").default("open"), // "open" | "in-progress" | "replied" | "closed"
   adminReply: text("admin_reply"),
   userId: text("user_id"), // Optional - for logged in users
-  createdAt: integer("created_at").default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at").default(sql`(unixepoch())`),
-  repliedAt: integer("replied_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  repliedAt: timestamp("replied_at"),
 });
 
 // Usage Tracking
-export const usageTracking = sqliteTable("usage_tracking", {
-  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+export const usageTracking = pgTable("usage_tracking", {
+  id: uuid("id").primaryKey().defaultRandom(),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   type: text("type").notNull(), // "chat" | "image" | "token"
   count: integer("count").notNull().default(1),
-  date: integer("date").default(sql`(unixepoch())`),
+  date: timestamp("date").defaultNow(),
 });
 
 // Admin Users
-export const adminUsers = sqliteTable("admin_users", {
-  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+export const adminUsers = pgTable("admin_users", {
+  id: uuid("id").primaryKey().defaultRandom(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(), // hashed
   role: text("role").default("admin"),
-  lastLogin: integer("last_login"),
-  createdAt: integer("created_at").default(sql`(unixepoch())`),
+  lastLogin: timestamp("last_login"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Model Capabilities
-export const modelCapabilities = sqliteTable("model_capabilities", {
-  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+export const modelCapabilities = pgTable("model_capabilities", {
+  id: uuid("id").primaryKey().defaultRandom(),
   modelName: text("model_name").notNull().unique(),
   displayName: text("display_name").notNull(),
-  supportsText: integer("supports_text", { mode: "boolean" }).default(true),
-  supportsImageInput: integer("supports_image_input", { mode: "boolean" }).default(false),
-  supportsAudioInput: integer("supports_audio_input", { mode: "boolean" }).default(false),
-  supportsImageOutput: integer("supports_image_output", { mode: "boolean" }).default(false),
-  supportsAudioOutput: integer("supports_audio_output", { mode: "boolean" }).default(false),
-  supportsWebSearch: integer("supports_web_search", { mode: "boolean" }).default(false),
-  supportsFileUpload: integer("supports_file_upload", { mode: "boolean" }).default(false),
-  isActive: integer("is_active", { mode: "boolean" }).default(true),
-  createdAt: integer("created_at").default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at").default(sql`(unixepoch())`),
+  supportsText: boolean("supports_text").default(true),
+  supportsImageInput: boolean("supports_image_input").default(false),
+  supportsAudioInput: boolean("supports_audio_input").default(false),
+  supportsImageOutput: boolean("supports_image_output").default(false),
+  supportsAudioOutput: boolean("supports_audio_output").default(false),
+  supportsWebSearch: boolean("supports_web_search").default(false),
+  supportsFileUpload: boolean("supports_file_upload").default(false),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Database Backups
-export const databaseBackups = sqliteTable("database_backups", {
-  id: text("id").primaryKey().default(sql`(hex(randomblob(16)))`),
+export const databaseBackups = pgTable("database_backups", {
+  id: uuid("id").primaryKey().defaultRandom(),
   fileName: text("file_name").notNull(),
   fileSize: integer("file_size").notNull(),
   filePath: text("file_path").notNull(),
   backupType: text("backup_type").notNull().default("full"), // "full" | "incremental"
-  createdAt: integer("created_at").default(sql`(unixepoch())`),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Relations
