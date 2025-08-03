@@ -11,6 +11,8 @@ import {
   contactMessages,
   usageTracking,
   adminUsers,
+  modelCapabilities,
+  databaseBackups,
   type User,
   type UpsertUser,
   type InsertChat,
@@ -35,6 +37,10 @@ import {
   type InsertUsageTracking,
   type AdminUser,
   type InsertAdminUser,
+  type ModelCapability,
+  type InsertModelCapability,
+  type DatabaseBackup,
+  type InsertDatabaseBackup,
   type ChatWithMessages,
   type MessageWithFiles,
   type UserWithSettings,
@@ -116,6 +122,17 @@ export interface IStorage {
   getAdminUser(username: string): Promise<AdminUser | undefined>;
   createAdminUser(data: InsertAdminUser): Promise<AdminUser>;
   updateAdminLastLogin(username: string): Promise<void>;
+  
+  // Model capabilities operations
+  getModelCapabilities(): Promise<ModelCapability[]>;
+  getModelCapability(modelName: string): Promise<ModelCapability | undefined>;
+  createModelCapability(data: InsertModelCapability): Promise<ModelCapability>;
+  updateModelCapability(modelName: string, data: Partial<InsertModelCapability>): Promise<ModelCapability>;
+  
+  // Database backup operations
+  createDatabaseBackup(data: InsertDatabaseBackup): Promise<DatabaseBackup>;
+  getDatabaseBackups(): Promise<DatabaseBackup[]>;
+  deleteDatabaseBackup(id: string): Promise<void>;
   
   // Data management
   deleteUserData(userId: string): Promise<void>;
@@ -590,20 +607,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserUsage(userId: string, type?: string, startDate?: Date): Promise<UsageTracking[]> {
-    let query = db
-      .select()
-      .from(usageTracking)
-      .where(eq(usageTracking.userId, userId));
-
+    const conditions = [eq(usageTracking.userId, userId)];
+    
     if (type) {
-      query = query.where(eq(usageTracking.type, type));
+      conditions.push(eq(usageTracking.type, type));
     }
 
     if (startDate) {
-      query = query.where(sql`${usageTracking.date} >= ${startDate}`);
+      conditions.push(sql`${usageTracking.date} >= ${startDate}`);
     }
 
-    return await query.orderBy(desc(usageTracking.date));
+    return await db
+      .select()
+      .from(usageTracking)
+      .where(and(...conditions))
+      .orderBy(desc(usageTracking.date));
   }
 
   async getUserDailyUsage(userId: string, date?: Date): Promise<{ chat: number, image: number, token: number }> {
@@ -662,6 +680,60 @@ export class DatabaseStorage implements IStorage {
       .where(eq(adminUsers.username, username));
   }
 
+  // Model capabilities operations
+  async getModelCapabilities(): Promise<ModelCapability[]> {
+    return await db
+      .select()
+      .from(modelCapabilities)
+      .where(eq(modelCapabilities.isActive, true))
+      .orderBy(modelCapabilities.modelName);
+  }
+
+  async getModelCapability(modelName: string): Promise<ModelCapability | undefined> {
+    const [capability] = await db
+      .select()
+      .from(modelCapabilities)
+      .where(eq(modelCapabilities.modelName, modelName));
+    return capability;
+  }
+
+  async createModelCapability(data: InsertModelCapability): Promise<ModelCapability> {
+    const [capability] = await db
+      .insert(modelCapabilities)
+      .values(data)
+      .returning();
+    return capability;
+  }
+
+  async updateModelCapability(modelName: string, data: Partial<InsertModelCapability>): Promise<ModelCapability> {
+    const [capability] = await db
+      .update(modelCapabilities)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(modelCapabilities.modelName, modelName))
+      .returning();
+    return capability;
+  }
+
+  // Database backup operations
+  async createDatabaseBackup(data: InsertDatabaseBackup): Promise<DatabaseBackup> {
+    const [backup] = await db
+      .insert(databaseBackups)
+      .values(data)
+      .returning();
+    return backup;
+  }
+
+  async getDatabaseBackups(): Promise<DatabaseBackup[]> {
+    return await db
+      .select()
+      .from(databaseBackups)
+      .orderBy(desc(databaseBackups.createdAt));
+  }
+
+  async deleteDatabaseBackup(id: string): Promise<void> {
+    await db.delete(databaseBackups).where(eq(databaseBackups.id, id));
+  }
+
   // Data management
   async deleteUserData(userId: string): Promise<void> {
     // Delete in correct order due to foreign key constraints
@@ -671,6 +743,138 @@ export class DatabaseStorage implements IStorage {
     await db.delete(subscriptions).where(eq(subscriptions.userId, userId));
     await db.delete(usageTracking).where(eq(usageTracking.userId, userId));
     // Note: We don't delete the user record itself as it's managed by auth
+  }
+
+  // Enhanced redeem code generation with flexible duration
+  async generateRedeemCodes(planName: string, duration: number, durationType: 'months' | 'years', count: number): Promise<RedeemCode[]> {
+    const plan = await this.getPlanByName(planName);
+    if (!plan) {
+      throw new Error(`Plan ${planName} not found`);
+    }
+
+    const codes: InsertRedeemCode[] = [];
+    for (let i = 0; i < count; i++) {
+      const code = this.generateRandomCode();
+      codes.push({
+        code,
+        planId: plan.id,
+        duration: durationType === 'years' ? duration * 12 : duration, // Convert years to months
+        durationType,
+        expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+      });
+    }
+
+    return await db.insert(redeemCodes).values(codes).returning();
+  }
+
+  private generateRandomCode(): string {
+    const chars = 'ABCDEFGHIJKLMNOPRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 16; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+      if (i > 0 && (i + 1) % 4 === 0 && i < 15) {
+        result += '-';
+      }
+    }
+    return result;
+  }
+
+  private async getPlanByName(name: string): Promise<Plan | undefined> {
+    const [plan] = await db
+      .select()
+      .from(plans)
+      .where(eq(plans.name, name));
+    return plan;
+  }
+
+  // Additional helper methods for admin panel
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).limit(100);
+  }
+
+  async getAllChats(): Promise<Chat[]> {
+    return await db.select().from(chats).limit(100);
+  }
+
+  async getAllSubscriptions(): Promise<Subscription[]> {
+    return await db.select().from(subscriptions).limit(100);
+  }
+
+  async getAllRedeemCodes(): Promise<RedeemCode[]> {
+    return await db.select().from(redeemCodes).limit(100);
+  }
+
+  async getAllSupportTickets(): Promise<SupportTicket[]> {
+    return await db.select().from(supportTickets).limit(100);
+  }
+
+  // Model capabilities management
+  async getModelCapabilities(): Promise<ModelCapability[]> {
+    return await db.select().from(modelCapabilities);
+  }
+
+  async updateModelCapability(modelName: string, updateData: any): Promise<ModelCapability> {
+    const [capability] = await db
+      .update(modelCapabilities)
+      .set(updateData)
+      .where(eq(modelCapabilities.modelName, modelName))
+      .returning();
+    return capability;
+  }
+
+  // Database backup management
+  async createDatabaseBackup(backupData: any): Promise<DatabaseBackup> {
+    const [backup] = await db
+      .insert(databaseBackups)
+      .values(backupData)
+      .returning();
+    return backup;
+  }
+
+  async getDatabaseBackups(): Promise<DatabaseBackup[]> {
+    return await db.select().from(databaseBackups).orderBy(desc(databaseBackups.createdAt));
+  }
+
+  async deleteDatabaseBackup(id: string): Promise<void> {
+    await db.delete(databaseBackups).where(eq(databaseBackups.id, id));
+  }
+
+  // Enhanced redeem code generation
+  async generateRedeemCodes(planName: string, duration: number, durationType: string, count: number = 1): Promise<RedeemCode[]> {
+    const plan = await this.getPlanByName(planName);
+    if (!plan) {
+      throw new Error(`Plan "${planName}" not found`);
+    }
+
+    const codes: RedeemCode[] = [];
+    
+    for (let i = 0; i < count; i++) {
+      const code = this.generateRandomCode();
+      const durationInDays = durationType === 'months' ? duration * 30 : duration * 365;
+      
+      const [newCode] = await db
+        .insert(redeemCodes)
+        .values({
+          code,
+          planId: plan.id,
+          duration: durationInDays,
+          isUsed: false,
+        })
+        .returning();
+      
+      codes.push(newCode);
+    }
+    
+    return codes;
+  }
+
+  private generateRandomCode(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 12; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
   }
 }
 

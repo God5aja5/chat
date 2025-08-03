@@ -133,7 +133,8 @@ export const redeemCodes = pgTable("redeem_codes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   code: varchar("code").notNull().unique(),
   planId: varchar("plan_id").notNull().references(() => plans.id),
-  duration: integer("duration").notNull(), // in days
+  duration: integer("duration").notNull(), // in months
+  durationType: varchar("duration_type").notNull().default("months"), // "months" | "years"
   isUsed: boolean("is_used").default(false),
   usedBy: varchar("used_by").references(() => users.id),
   usedAt: timestamp("used_at"),
@@ -175,6 +176,33 @@ export const adminUsers = pgTable("admin_users", {
   password: varchar("password").notNull(), // hashed
   role: varchar("role").default("admin"),
   lastLogin: timestamp("last_login"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Model Capabilities
+export const modelCapabilities = pgTable("model_capabilities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  modelName: varchar("model_name").notNull().unique(),
+  displayName: varchar("display_name").notNull(),
+  supportsText: boolean("supports_text").default(true),
+  supportsImageInput: boolean("supports_image_input").default(false),
+  supportsAudioInput: boolean("supports_audio_input").default(false),
+  supportsImageOutput: boolean("supports_image_output").default(false),
+  supportsAudioOutput: boolean("supports_audio_output").default(false),
+  supportsWebSearch: boolean("supports_web_search").default(false),
+  supportsFileUpload: boolean("supports_file_upload").default(false),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Database Backups
+export const databaseBackups = pgTable("database_backups", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fileName: varchar("file_name").notNull(),
+  fileSize: integer("file_size").notNull(),
+  filePath: varchar("file_path").notNull(),
+  backupType: varchar("backup_type").notNull().default("full"), // "full" | "incremental"
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -269,6 +297,10 @@ export const usageTrackingRelations = relations(usageTracking, ({ one }) => ({
   }),
 }));
 
+export const modelCapabilitiesRelations = relations(modelCapabilities, ({ many }) => ({
+  // No direct relations needed
+}));
+
 // Zod schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   email: true,
@@ -354,6 +386,17 @@ export const insertAdminUserSchema = createInsertSchema(adminUsers).omit({
   createdAt: true,
 });
 
+export const insertModelCapabilitySchema = createInsertSchema(modelCapabilities).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDatabaseBackupSchema = createInsertSchema(databaseBackups).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type UpsertUser = z.infer<typeof insertUserSchema> & { id: string };
 export type User = typeof users.$inferSelect;
@@ -379,6 +422,10 @@ export type InsertUsageTracking = z.infer<typeof insertUsageTrackingSchema>;
 export type UsageTracking = typeof usageTracking.$inferSelect;
 export type InsertAdminUser = z.infer<typeof insertAdminUserSchema>;
 export type AdminUser = typeof adminUsers.$inferSelect;
+export type InsertModelCapability = z.infer<typeof insertModelCapabilitySchema>;
+export type ModelCapability = typeof modelCapabilities.$inferSelect;
+export type InsertDatabaseBackup = z.infer<typeof insertDatabaseBackupSchema>;
+export type DatabaseBackup = typeof databaseBackups.$inferSelect;
 
 // Extended types with relations
 export type ChatWithMessages = Chat & {

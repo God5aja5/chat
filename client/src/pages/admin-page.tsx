@@ -27,8 +27,16 @@ import {
   LogOut,
   Shield,
   Smartphone,
-  Monitor
+  Monitor,
+  Database,
+  Brain,
+  Gift,
+  Settings
 } from "lucide-react";
+import { ModelCapabilityManager } from "@/components/ModelCapabilityManager";
+import { DatabaseManager } from "@/components/DatabaseManager";
+import { EnhancedRedeemCodeGenerator } from "@/components/EnhancedRedeemCodeGenerator";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface User {
   id: string;
@@ -123,6 +131,7 @@ const priorityColors = {
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const isMobile = useIsMobile();
   const [credentials, setCredentials] = useState({ username: "", password: "" });
   const [selectedTicket, setSelectedTicket] = useState<ContactMessage | null>(null);
   const [replyText, setReplyText] = useState("");
@@ -436,32 +445,131 @@ export default function AdminPage() {
         </div>
 
         {/* Main Tabs */}
-        <Tabs defaultValue="tickets" className="w-full">
-          <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2' : 'grid-cols-4'} mb-6`}>
-            <TabsTrigger value="tickets" data-testid="tab-tickets">
-              {isMobile ? <MessageSquare className="h-4 w-4" /> : 
-              <><MessageSquare className="h-4 w-4 mr-2" />Support Tickets</>}
+        <Tabs defaultValue="dashboard" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-7 text-xs sm:text-sm">
+            <TabsTrigger value="dashboard" className="flex items-center gap-1">
+              <Monitor className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Dashboard</span>
             </TabsTrigger>
-            <TabsTrigger value="users" data-testid="tab-users">
-              {isMobile ? <Users className="h-4 w-4" /> : 
-              <><Users className="h-4 w-4 mr-2" />Users</>}
+            <TabsTrigger value="users" className="flex items-center gap-1">
+              <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Users</span>
             </TabsTrigger>
-            {!isMobile && (
-              <>
-                <TabsTrigger value="subscriptions" data-testid="tab-subscriptions">
-                  <Star className="h-4 w-4 mr-2" />
-                  Subscriptions
-                </TabsTrigger>
-                <TabsTrigger value="codes" data-testid="tab-codes">
-                  <TrendingUp className="h-4 w-4 mr-2" />
-                  Redeem Codes
-                </TabsTrigger>
-              </>
-            )}
+            <TabsTrigger value="messages" className="flex items-center gap-1">
+              <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Messages</span>
+            </TabsTrigger>
+            <TabsTrigger value="subscriptions" className="flex items-center gap-1">
+              <Star className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Plans</span>
+            </TabsTrigger>
+            <TabsTrigger value="codes" className="flex items-center gap-1">
+              <Gift className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Codes</span>
+            </TabsTrigger>
+            <TabsTrigger value="models" className="flex items-center gap-1">
+              <Brain className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Models</span>
+            </TabsTrigger>
+            <TabsTrigger value="database" className="flex items-center gap-1">
+              <Database className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Database</span>
+            </TabsTrigger>
           </TabsList>
 
-          {/* Support Tickets Tab */}
-          <TabsContent value="tickets">
+          {/* Dashboard Tab */}
+          <TabsContent value="dashboard">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Activity</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-sm">New user registered</span>
+                      <span className="text-xs text-muted-foreground ml-auto">2m ago</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span className="text-sm">Support ticket opened</span>
+                      <span className="text-xs text-muted-foreground ml-auto">5m ago</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                      <span className="text-sm">Premium subscription activated</span>
+                      <span className="text-xs text-muted-foreground ml-auto">15m ago</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>System Status</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">API Status</span>
+                      <Badge variant="default">Operational</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Database</span>
+                      <Badge variant="default">Connected</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Cache</span>
+                      <Badge variant="secondary">Fallback Mode</Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Users Tab */}
+          <TabsContent value="users">
+            <Card>
+              <CardHeader>
+                <CardTitle>User Management</CardTitle>
+                <CardDescription>
+                  Monitor and manage registered users
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {users?.map((user) => (
+                    <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <p className="font-medium">{user.name}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{user.email}</p>
+                        {user.subscription && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {user.subscription.plan.name} - ${user.subscription.plan.price}/month
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <Badge variant={user.subscription?.status === "active" ? "default" : "secondary"}>
+                          {user.subscription?.status || "Free"}
+                        </Badge>
+                        {user.usage && (
+                          <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            Chat: {user.usage.chat} | Image: {user.usage.image}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Messages Tab */}
+          <TabsContent value="messages">
             <Card>
               <CardHeader>
                 <CardTitle>Support Tickets</CardTitle>
@@ -571,10 +679,8 @@ export default function AdminPage() {
             </Card>
           </TabsContent>
 
-          {/* Desktop-only tabs */}
-          {!isMobile && (
-            <>
-              <TabsContent value="subscriptions">
+          {/* Subscriptions Tab */}
+          <TabsContent value="subscriptions">
                 <Card>
                   <CardHeader>
                     <CardTitle>Subscriptions</CardTitle>
@@ -608,45 +714,20 @@ export default function AdminPage() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="codes">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Redeem Codes</CardTitle>
-                    <CardDescription>
-                      Manage promotional and redeem codes
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {redeemCodes?.map((code) => (
-                        <div key={code.id} className="flex items-center justify-between p-4 border rounded-lg">
-                          <div>
-                            <p className="font-mono font-medium">{code.code}</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                              {code.plan.name} - {code.duration} days
-                            </p>
-                            {code.isUsed && code.usedBy && (
-                              <p className="text-sm text-gray-600 dark:text-gray-400">
-                                Used by: {code.usedBy.name} ({code.usedBy.email})
-                              </p>
-                            )}
-                          </div>
-                          <div className="text-right">
-                            <Badge variant={code.isUsed ? "secondary" : "default"}>
-                              {code.isUsed ? "Used" : "Available"}
-                            </Badge>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                              Created: {new Date(code.createdAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </>
-          )}
+          {/* Codes Tab */}
+          <TabsContent value="codes">
+            <EnhancedRedeemCodeGenerator />
+          </TabsContent>
+
+          {/* Models Tab */}
+          <TabsContent value="models">
+            <ModelCapabilityManager />
+          </TabsContent>
+
+          {/* Database Tab */}
+          <TabsContent value="database">
+            <DatabaseManager />
+          </TabsContent>
         </Tabs>
       </div>
 

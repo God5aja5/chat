@@ -18,6 +18,8 @@ import {
   insertContactMessageSchema,
   insertUsageTrackingSchema,
   insertAdminUserSchema,
+  insertModelCapabilitySchema,
+  insertDatabaseBackupSchema,
 } from "@shared/schema";
 import { z } from "zod";
 import { scrypt, timingSafeEqual } from "crypto";

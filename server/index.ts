@@ -2,6 +2,8 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeData } from "./init-data";
+import { initializeModelCapabilities } from "./init-models";
+import { initRedis } from "./redis";
 
 const app = express();
 app.use(express.json());
@@ -38,8 +40,14 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize Redis cache service
+  await initRedis();
+  
   // Initialize default data (plans and admin user)
   await initializeData();
+  
+  // Initialize model capabilities
+  await initializeModelCapabilities();
   
   const server = await registerRoutes(app);
 
