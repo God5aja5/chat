@@ -569,6 +569,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content: msg.content,
       }));
 
+      // Debug logging
+      console.log(`Chat ${currentChatId}: Found ${messages.length} messages for history`);
+      console.log("Conversation history:", JSON.stringify(conversationHistory.slice(-3), null, 2)); // Log last 3 messages
+
       let assistantResponse = "";
       
       // Create assistant message placeholder
@@ -619,6 +623,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } else {
         // Regular chat completion
+        console.log(`Sending to OpenAI: ${conversationHistory.length} messages with model ${chat.model}`);
         await openaiService.streamChatCompletion({
           messages: conversationHistory,
           model: chat.model,
