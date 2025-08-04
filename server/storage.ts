@@ -14,49 +14,65 @@ import {
   modelCapabilities,
   databaseBackups,
 
-  type User,
-  type UpsertUser,
+  type SelectUser,
+  type InsertUser,
   type InsertChat,
-  type Chat,
+  type SelectChat,
   type InsertMessage,
-  type Message,
+  type SelectMessage,
   type InsertFile,
-  type File,
+  type SelectFile,
   type InsertUserSettings,
-  type UserSettings,
+  type SelectUserSettings,
   type InsertArtifact,
-  type Artifact,
-  type Plan,
+  type SelectArtifact,
+  type SelectPlan,
   type InsertPlan,
-  type Subscription,
+  type SelectSubscription,
   type InsertSubscription,
-  type RedeemCode,
+  type SelectRedeemCode,
   type InsertRedeemCode,
-  type ContactMessage,
+  type SelectContactMessage,
   type InsertContactMessage,
-  type UsageTracking,
+  type SelectUsageTracking,
   type InsertUsageTracking,
-  type AdminUser,
+  type SelectAdminUser,
   type InsertAdminUser,
-  type ModelCapability,
+  type SelectModelCapability,
   type InsertModelCapability,
-  type DatabaseBackup,
+  type SelectDatabaseBackup,
   type InsertDatabaseBackup,
-
-  type ChatWithMessages,
-  type MessageWithFiles,
-  type UserWithSettings,
-  type SubscriptionWithPlan,
-  type RedeemCodeWithPlan,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
+
+// Type aliases for easier use
+export type User = SelectUser;
+export type Chat = SelectChat;
+export type Message = SelectMessage;
+export type File = SelectFile;
+export type UserSettings = SelectUserSettings;
+export type Artifact = SelectArtifact;
+export type Plan = SelectPlan;
+export type Subscription = SelectSubscription;
+export type RedeemCode = SelectRedeemCode;
+export type ContactMessage = SelectContactMessage;
+export type UsageTracking = SelectUsageTracking;
+export type AdminUser = SelectAdminUser;
+export type ModelCapability = SelectModelCapability;
+export type DatabaseBackup = SelectDatabaseBackup;
+
+// Extended types for relations
+export type ChatWithMessages = Chat & { messages: Message[] };
+export type MessageWithFiles = Message & { files: File[] };
+export type SubscriptionWithPlan = Subscription & { plan: Plan };
+export type RedeemCodeWithPlan = RedeemCode & { plan: Plan };
 
 // Interface for storage operations
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser): Promise<User>;
+  upsertUser(user: InsertUser): Promise<User>;
   
   // User settings operations
   getUserSettings(userId: string): Promise<UserSettings | undefined>;
@@ -603,6 +619,42 @@ export class DatabaseStorage implements IStorage {
     await db.delete(redeemCodes).where(eq(redeemCodes.id, codeId));
   }
 
+  async redeemCode(userId: string, code: string): Promise<{ subscription: Subscription; message: string }> {
+    const redeemCode = await this.getRedeemCode(code);
+    if (!redeemCode) {
+      throw new Error("Invalid redeem code");
+    }
+
+    if (redeemCode.isUsed) {
+      throw new Error("Redeem code has already been used");
+    }
+
+    // Check if code is expired
+    if (redeemCode.expiresAt && new Date() > redeemCode.expiresAt) {
+      throw new Error("Redeem code has expired");
+    }
+
+    // Create subscription based on redeem code
+    const expiresAt = new Date();
+    if (redeemCode.durationType === "years") {
+      expiresAt.setFullYear(expiresAt.getFullYear() + redeemCode.duration);
+    } else {
+      expiresAt.setMonth(expiresAt.getMonth() + redeemCode.duration);
+    }
+
+    const subscription = await this.createSubscription({
+      userId,
+      planId: redeemCode.planId,
+      status: "active",
+      expiresAt,
+    });
+
+    // Mark redeem code as used
+    await this.useRedeemCode(code, userId);
+
+    return { subscription, message: "Redeem code applied successfully!" };
+  }
+
   // Contact message operations - alias for admin panel
   async getAllSupportTickets(): Promise<ContactMessage[]> {
     return await db
@@ -721,6 +773,32 @@ export class DatabaseStorage implements IStorage {
     });
 
     return result;
+  }
+
+  // Admin stats methods
+  async getUserCount(): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(users);
+    return result[0]?.count || 0;
+  }
+
+  async getChatCount(): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(chats);
+    return result[0]?.count || 0;
+  }
+
+  async getMessageCount(): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(messages);
+    return result[0]?.count || 0;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
   }
 
   // Admin operations

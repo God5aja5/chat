@@ -288,7 +288,7 @@ export const redeemCodesRelations = relations(redeemCodes, ({ one }) => ({
     fields: [redeemCodes.planId],
     references: [plans.id],
   }),
-  user: one(users, {
+  usedByUser: one(users, {
     fields: [redeemCodes.usedBy],
     references: [users.id],
   }),
@@ -301,164 +301,113 @@ export const usageTrackingRelations = relations(usageTracking, ({ one }) => ({
   }),
 }));
 
-export const modelCapabilitiesRelations = relations(modelCapabilities, ({ many }) => ({
-  // No direct relations needed
+export const contactMessagesRelations = relations(contactMessages, ({ one }) => ({
+  user: one(users, {
+    fields: [contactMessages.userId],
+    references: [users.id],
+  }),
 }));
 
-// Zod schemas
-export const insertUserSchema = createInsertSchema(users).pick({
-  email: true,
-  name: true,
-  profileImageUrl: true,
-});
-
-export const insertChatSchema = createInsertSchema(chats).pick({
-  title: true,
-  model: true,
-});
-
-export const insertMessageSchema = createInsertSchema(messages).pick({
-  chatId: true,
-  role: true,
-  content: true,
-  tokens: true,
-});
-
-export const insertFileSchema = createInsertSchema(files).pick({
-  chatId: true,
-  messageId: true,
-  fileName: true,
-  fileSize: true,
-  mimeType: true,
-  filePath: true,
-});
-
-export const insertUserSettingsSchema = createInsertSchema(userSettings).omit({
-  id: true,
-  userId: true,
+// Zod schemas for validation
+export const insertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
   updatedAt: true,
 });
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type SelectUser = typeof users.$inferSelect;
 
-export const insertArtifactSchema = createInsertSchema(artifacts).pick({
-  chatId: true,
-  messageId: true,
-  fileName: true,
-  content: true,
-  version: true,
-  type: true,
-  language: true,
-  linkedArtifactId: true,
+export const insertChatSchema = createInsertSchema(chats).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
+export type InsertChat = z.infer<typeof insertChatSchema>;
+export type SelectChat = typeof chats.$inferSelect;
+
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true,
+  timestamp: true,
+});
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type SelectMessage = typeof messages.$inferSelect;
+
+export const insertFileSchema = createInsertSchema(files).omit({
+  id: true,
+  uploadedAt: true,
+});
+export type InsertFile = z.infer<typeof insertFileSchema>;
+export type SelectFile = typeof files.$inferSelect;
+
+export const insertUserSettingsSchema = createInsertSchema(userSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertUserSettings = z.infer<typeof insertUserSettingsSchema>;
+export type SelectUserSettings = typeof userSettings.$inferSelect;
+
+export const insertArtifactSchema = createInsertSchema(artifacts).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertArtifact = z.infer<typeof insertArtifactSchema>;
+export type SelectArtifact = typeof artifacts.$inferSelect;
 
 export const insertPlanSchema = createInsertSchema(plans).omit({
   id: true,
   createdAt: true,
 });
+export type InsertPlan = z.infer<typeof insertPlanSchema>;
+export type SelectPlan = typeof plans.$inferSelect;
 
 export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 });
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+export type SelectSubscription = typeof subscriptions.$inferSelect;
 
 export const insertRedeemCodeSchema = createInsertSchema(redeemCodes).omit({
   id: true,
-  isUsed: true,
-  usedBy: true,
-  usedAt: true,
   createdAt: true,
 });
+export type InsertRedeemCode = z.infer<typeof insertRedeemCodeSchema>;
+export type SelectRedeemCode = typeof redeemCodes.$inferSelect;
 
 export const insertContactMessageSchema = createInsertSchema(contactMessages).omit({
   id: true,
-  status: true,
-  adminReply: true,
   createdAt: true,
-  repliedAt: true,
+  updatedAt: true,
 });
+export type InsertContactMessage = z.infer<typeof insertContactMessageSchema>;
+export type SelectContactMessage = typeof contactMessages.$inferSelect;
 
 export const insertUsageTrackingSchema = createInsertSchema(usageTracking).omit({
   id: true,
   date: true,
 });
+export type InsertUsageTracking = z.infer<typeof insertUsageTrackingSchema>;
+export type SelectUsageTracking = typeof usageTracking.$inferSelect;
 
 export const insertAdminUserSchema = createInsertSchema(adminUsers).omit({
   id: true,
-  lastLogin: true,
   createdAt: true,
 });
+export type InsertAdminUser = z.infer<typeof insertAdminUserSchema>;
+export type SelectAdminUser = typeof adminUsers.$inferSelect;
 
 export const insertModelCapabilitySchema = createInsertSchema(modelCapabilities).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 });
+export type InsertModelCapability = z.infer<typeof insertModelCapabilitySchema>;
+export type SelectModelCapability = typeof modelCapabilities.$inferSelect;
 
 export const insertDatabaseBackupSchema = createInsertSchema(databaseBackups).omit({
   id: true,
   createdAt: true,
 });
-
-// Types
-export type UpsertUser = z.infer<typeof insertUserSchema> & { id: string };
-export type User = typeof users.$inferSelect;
-export type InsertChat = z.infer<typeof insertChatSchema>;
-export type Chat = typeof chats.$inferSelect;
-export type InsertMessage = z.infer<typeof insertMessageSchema>;
-export type Message = typeof messages.$inferSelect;
-export type InsertFile = z.infer<typeof insertFileSchema>;
-export type File = typeof files.$inferSelect;
-export type InsertUserSettings = z.infer<typeof insertUserSettingsSchema>;
-export type UserSettings = typeof userSettings.$inferSelect;
-export type InsertArtifact = z.infer<typeof insertArtifactSchema>;
-export type Artifact = typeof artifacts.$inferSelect;
-export type InsertPlan = z.infer<typeof insertPlanSchema>;
-export type Plan = typeof plans.$inferSelect;
-export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
-export type Subscription = typeof subscriptions.$inferSelect;
-export type InsertRedeemCode = z.infer<typeof insertRedeemCodeSchema>;
-export type RedeemCode = typeof redeemCodes.$inferSelect;
-export type InsertContactMessage = z.infer<typeof insertContactMessageSchema>;
-export type ContactMessage = typeof contactMessages.$inferSelect;
-export type InsertUsageTracking = z.infer<typeof insertUsageTrackingSchema>;
-export type UsageTracking = typeof usageTracking.$inferSelect;
-export type InsertAdminUser = z.infer<typeof insertAdminUserSchema>;
-export type AdminUser = typeof adminUsers.$inferSelect;
-export type InsertModelCapability = z.infer<typeof insertModelCapabilitySchema>;
-export type ModelCapability = typeof modelCapabilities.$inferSelect;
 export type InsertDatabaseBackup = z.infer<typeof insertDatabaseBackupSchema>;
-export type DatabaseBackup = typeof databaseBackups.$inferSelect;
-
-// Extended types with relations
-export type ChatWithMessages = Chat & {
-  messages: Message[];
-  files: File[];
-  artifacts: Artifact[];
-};
-
-export type MessageWithFiles = Message & {
-  files: File[];
-  artifacts: Artifact[];
-};
-
-export type UserWithSettings = User & {
-  settings?: UserSettings;
-  subscription?: Subscription & { plan: Plan };
-};
-
-export type PlanWithSubscriptions = Plan & {
-  subscriptions: Subscription[];
-};
-
-export type SubscriptionWithPlan = Subscription & {
-  plan: Plan;
-  user: User;
-};
-
-export type RedeemCodeWithPlan = RedeemCode & {
-  plan: Plan;
-  user?: User;
-};
-
-export type ContactMessageWithStatus = ContactMessage;
+export type SelectDatabaseBackup = typeof databaseBackups.$inferSelect;

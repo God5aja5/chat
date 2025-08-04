@@ -8,8 +8,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useChatContext } from "@/contexts/ChatContext";
 import { apiRequest } from "@/lib/queryClient";
@@ -33,6 +34,19 @@ const MODELS = [
     icon: Brain,
     badge: "Latest",
     badgeVariant: "default" as const,
+    isPremium: false,
+  },
+  {
+    id: "gpt-4o-premium",
+    name: "GPT-4o Premium",
+    description: "Enhanced GPT-4o with unlimited usage and priority access",
+    contextWindow: "128K tokens",
+    supportsImages: true,
+    supportsFiles: true,
+    icon: Brain,
+    badge: "Premium",
+    badgeVariant: "default" as const,
+    isPremium: true,
   },
   {
     id: "gpt-4-turbo",
@@ -44,6 +58,7 @@ const MODELS = [
     icon: Zap,
     badge: "Fast",
     badgeVariant: "secondary" as const,
+    isPremium: false,
   },
   {
     id: "gpt-4",
@@ -55,6 +70,7 @@ const MODELS = [
     icon: Shield,
     badge: "Reliable",
     badgeVariant: "outline" as const,
+    isPremium: false,
   },
   {
     id: "gpt-3.5-turbo",
@@ -66,6 +82,7 @@ const MODELS = [
     icon: Zap,
     badge: "Economic",
     badgeVariant: "outline" as const,
+    isPremium: false,
   },
 ];
 
@@ -73,6 +90,21 @@ export function ModelSelector({ open, onOpenChange, currentModel = "gpt-4o" }: M
   const [selectedModel, setSelectedModel] = useState(currentModel);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Fetch user subscription data
+  const { data: subscription } = useQuery({
+    queryKey: ["/api/user/subscription"],
+    enabled: open, // Only fetch when modal is open
+  });
+  
+  const isPremiumUser = subscription?.status === "active";
+  
+  // Update selectedModel when currentModel changes (prevent auto-revert)
+  React.useEffect(() => {
+    if (currentModel && currentModel !== selectedModel) {
+      setSelectedModel(currentModel);
+    }
+  }, [currentModel]);
 
   const updateModelMutation = useMutation({
     mutationFn: async (model: string) => {
@@ -107,7 +139,7 @@ export function ModelSelector({ open, onOpenChange, currentModel = "gpt-4o" }: M
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl max-w-[95vw] sm:max-h-[90vh] max-h-[95vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Brain className="h-5 w-5" />
@@ -115,89 +147,115 @@ export function ModelSelector({ open, onOpenChange, currentModel = "gpt-4o" }: M
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <RadioGroup value={selectedModel} onValueChange={setSelectedModel}>
-            {MODELS.map((model) => {
-              const IconComponent = model.icon;
-              const isSelected = selectedModel === model.id;
-              
-              return (
-                <div key={model.id}>
-                  <Label
-                    htmlFor={model.id}
-                    className={cn(
-                      "flex items-start gap-4 p-4 rounded-lg border cursor-pointer transition-colors",
-                      isSelected
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:bg-muted/50"
-                    )}
-                  >
-                    <RadioGroupItem value={model.id} id={model.id} className="mt-1" />
-                    
-                    <div className="flex items-start gap-3 flex-1">
-                      <div className={cn(
-                        "p-2 rounded-lg",
-                        isSelected ? "bg-primary text-primary-foreground" : "bg-muted"
-                      )}>
-                        <IconComponent className="h-4 w-4" />
-                      </div>
+        <ScrollArea className="max-h-[60vh] pr-6">
+          <div className="space-y-4">
+            <RadioGroup value={selectedModel} onValueChange={setSelectedModel}>
+              {MODELS.map((model) => {
+                const IconComponent = model.icon;
+                const isSelected = selectedModel === model.id;
+                
+                return (
+                  <div key={model.id} className="relative">
+                    <Label
+                      htmlFor={model.id}
+                      className={cn(
+                        "flex items-start gap-4 p-4 rounded-lg border transition-colors",
+                        isSelected
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:bg-muted/50",
+                        model.isPremium && !isPremiumUser
+                          ? "opacity-50 cursor-not-allowed"
+                          : "cursor-pointer"
+                      )}
+                    >
+                      <RadioGroupItem 
+                        value={model.id} 
+                        id={model.id} 
+                        className="mt-1" 
+                        disabled={model.isPremium && !isPremiumUser}
+                      />
                       
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium">{model.name}</span>
-                          <Badge variant={model.badgeVariant}>{model.badge}</Badge>
+                      <div className="flex items-start gap-3 flex-1">
+                        <div className={cn(
+                          "p-2 rounded-lg",
+                          isSelected ? "bg-primary text-primary-foreground" : "bg-muted"
+                        )}>
+                          <IconComponent className="h-4 w-4" />
                         </div>
                         
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {model.description}
-                        </p>
-                        
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span>{model.contextWindow}</span>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <span className="font-medium">{model.name}</span>
+                            <Badge variant={model.badgeVariant}>{model.badge}</Badge>
+                            {model.isPremium && (
+                              <Badge 
+                                variant="secondary" 
+                                className={cn(
+                                  "bg-gradient-to-r from-yellow-500 to-orange-500 text-white",
+                                  !isPremiumUser && "opacity-75"
+                                )}
+                              >
+                                ⭐ Premium
+                              </Badge>
+                            )}
+                            {model.isPremium && !isPremiumUser && (
+                              <Badge variant="outline" className="text-orange-600 border-orange-300">
+                                Requires Premium
+                              </Badge>
+                            )}
+                          </div>
                           
-                          <div className="flex items-center gap-2">
-                            {model.supportsImages && (
-                              <div className="flex items-center gap-1">
-                                <ImageIcon className="h-3 w-3" />
-                                <span>Images</span>
-                              </div>
-                            )}
-                            {model.supportsFiles && (
-                              <div className="flex items-center gap-1">
-                                <FileText className="h-3 w-3" />
-                                <span>Files</span>
-                              </div>
-                            )}
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {model.description}
+                          </p>
+                          
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                            <span>{model.contextWindow}</span>
+                            
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {model.supportsImages && (
+                                <div className="flex items-center gap-1">
+                                  <ImageIcon className="h-3 w-3" />
+                                  <span>Images</span>
+                                </div>
+                              )}
+                              {model.supportsFiles && (
+                                <div className="flex items-center gap-1">
+                                  <FileText className="h-3 w-3" />
+                                  <span>Files</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </Label>
-                </div>
-              );
-            })}
-          </RadioGroup>
+                    </Label>
+                  </div>
+                );
+              })}
+            </RadioGroup>
+          </div>
+        </ScrollArea>
 
-          {/* Model Comparison Note */}
-          <div className="bg-muted/50 p-4 rounded-lg">
-            <h4 className="font-medium mb-2">Model Capabilities</h4>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="font-medium mb-1">🖼️ Image Support</p>
-                <p className="text-muted-foreground">GPT-4o, GPT-4 Turbo</p>
-              </div>
-              <div>
-                <p className="font-medium mb-1">📁 File Support</p>
-                <p className="text-muted-foreground">GPT-4o, GPT-4 Turbo</p>
-              </div>
-              <div>
-                <p className="font-medium mb-1">⚡ Speed</p>
-                <p className="text-muted-foreground">GPT-3.5 Turbo, GPT-4 Turbo</p>
-              </div>
-              <div>
-                <p className="font-medium mb-1">🧠 Reasoning</p>
-                <p className="text-muted-foreground">GPT-4o, GPT-4</p>
-              </div>
+        {/* Model Comparison Note */}
+        <div className="bg-muted/50 p-4 rounded-lg">
+          <h4 className="font-medium mb-2">Model Capabilities</h4>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="font-medium mb-1">🖼️ Image Support</p>
+              <p className="text-muted-foreground">GPT-4o, GPT-4 Turbo</p>
+            </div>
+            <div>
+              <p className="font-medium mb-1">📁 File Support</p>
+              <p className="text-muted-foreground">GPT-4o, GPT-4 Turbo</p>
+            </div>
+            <div>
+              <p className="font-medium mb-1">⚡ Speed</p>
+              <p className="text-muted-foreground">GPT-3.5 Turbo, GPT-4 Turbo</p>
+            </div>
+            <div>
+              <p className="font-medium mb-1">🧠 Reasoning</p>
+              <p className="text-muted-foreground">GPT-4o, GPT-4</p>
             </div>
           </div>
         </div>

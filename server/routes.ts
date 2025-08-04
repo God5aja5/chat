@@ -819,6 +819,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/user/subscription', verifyFirebaseToken, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const subscription = await storage.getUserSubscription(userId);
+      res.json(subscription);
+    } catch (error) {
+      console.error("Error fetching subscription:", error);
+      res.status(500).json({ message: "Failed to fetch subscription" });
+    }
+  });
+
+  // Redeem code route
+  app.post('/api/redeem-code', verifyFirebaseToken, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const { code } = req.body;
+      
+      if (!code) {
+        return res.status(400).json({ message: "Redeem code is required" });
+      }
+
+      const result = await storage.redeemCode(userId, code);
+      res.json(result);
+    } catch (error) {
+      console.error("Error redeeming code:", error);
+      res.status(400).json({ message: error.message || "Failed to redeem code" });
+    }
+  });
+
   app.get('/api/subscription', verifyFirebaseToken, async (req: any, res) => {
     try {
       const userId = req.user.uid;
@@ -1086,6 +1115,137 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Health check
   app.get('/api/health', (req, res) => {
     res.json({ status: "OK", timestamp: new Date().toISOString() });
+  });
+
+  // Admin API routes
+  app.get('/api/admin/stats', async (req, res) => {
+    try {
+      const totalUsers = await storage.getUserCount();
+      const activeUsers = Math.floor(totalUsers * 0.7); // Estimate active users
+      const totalChats = await storage.getChatCount();
+      const totalMessages = await storage.getMessageCount();
+      
+      const stats = {
+        totalUsers,
+        activeUsers,
+        totalChats,
+        totalMessages,
+        totalRevenue: 50000, // Example data
+        monthlyRevenue: 12000, // Example data
+      };
+      
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching admin stats:", error);
+      res.status(500).json({ message: "Failed to fetch stats" });
+    }
+  });
+
+  app.get('/api/admin/users', async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      const usersWithSubscriptions = await Promise.all(
+        users.map(async (user) => {
+          const subscription = await storage.getUserSubscription(user.id);
+          return {
+            ...user,
+            subscription: subscription ? "Premium" : "Free"
+          };
+        })
+      );
+      res.json(usersWithSubscriptions);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.get('/api/admin/redeem-codes', async (req, res) => {
+    try {
+      const codes = await storage.getUnusedRedeemCodes();
+      res.json(codes);
+    } catch (error) {
+      console.error("Error fetching redeem codes:", error);
+      res.status(500).json({ message: "Failed to fetch redeem codes" });
+    }
+  });
+
+  app.post('/api/admin/redeem-codes/generate', async (req, res) => {
+    try {
+      const { planName, duration, durationType, count } = req.body;
+      
+      // Create a plan if it doesn't exist
+      let plan;
+      const plans = await storage.getPlans();
+      plan = plans.find(p => p.name === planName);
+      
+      if (!plan) {
+        // Create the plan
+        plan = await storage.createPlan({
+          name: planName,
+          price: planName === 'Premium' ? 800 : 1500, // $8 or $15 in cents
+          duration: 'monthly',
+          features: JSON.stringify(['Unlimited chats', 'Premium models', 'Priority support']),
+          isActive: true,
+        });
+      }
+
+      const codes = [];
+      for (let i = 0; i < count; i++) {
+        const code = `${planName.toUpperCase()}-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+        const redeemCode = await storage.createRedeemCode({
+          code,
+          planId: plan.id,
+          duration,
+          durationType,
+          isUsed: false,
+          expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year expiry
+        });
+        codes.push(redeemCode);
+      }
+
+      res.json({ codes, message: `Generated ${count} redeem codes successfully` });
+    } catch (error) {
+      console.error("Error generating redeem codes:", error);
+      res.status(500).json({ message: "Failed to generate redeem codes" });
+    }
+  });
+
+  app.post('/api/admin/users/:userId/remove-premium', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      
+      // Find and expire user's subscription
+      const subscription = await storage.getUserSubscription(userId);
+      if (subscription) {
+        await storage.expireSubscription(subscription.id);
+      }
+
+      res.json({ message: "Premium access removed successfully" });
+    } catch (error) {
+      console.error("Error removing premium access:", error);
+      res.status(500).json({ message: "Failed to remove premium access" });
+    }
+  });
+
+  app.get('/api/admin/support-tickets', async (req, res) => {
+    try {
+      const tickets = await storage.getAllSupportTickets();
+      res.json(tickets);
+    } catch (error) {
+      console.error("Error fetching support tickets:", error);
+      res.status(500).json({ message: "Failed to fetch support tickets" });
+    }
+  });
+
+  app.get('/api/admin/subscriptions', async (req, res) => {
+    try {
+      const subscriptions = await storage.getActiveSubscriptions();
+      res.json(subscriptions);
+    } catch (error) {
+      console.error("Error fetching subscriptions:", error);
+      res.status(500).json({ message: "Failed to fetch subscriptions" });
+    }
   });
 
   const httpServer = createServer(app);
