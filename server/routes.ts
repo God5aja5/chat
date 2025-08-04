@@ -392,15 +392,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/user/settings', verifyFirebaseToken, async (req: any, res) => {
     try {
       const userId = req.user.uid;
-      const settingsData = insertUserSettingsSchema.parse(req.body);
+      const settingsData = {
+        ...req.body,
+        userId: userId,
+      };
       
       const settings = await storage.upsertUserSettings(userId, settingsData);
       res.json(settings);
     } catch (error) {
       console.error("Error updating user settings:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid settings data", errors: error.errors });
-      }
       res.status(500).json({ message: "Failed to update settings" });
     }
   });
@@ -530,8 +530,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create new chat if none provided
       if (!currentChatId) {
-        const newChat = await storage.createChat(userId, {
+        const newChat = await storage.createChat({
           title: content.slice(0, 50) + (content.length > 50 ? "..." : ""),
+          userId: userId,
           model: userSettings?.defaultModel || "gpt-4o",
         });
         currentChatId = newChat.id;

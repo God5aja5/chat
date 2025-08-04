@@ -97,18 +97,7 @@ const MODELS = [
     isPremium: false,
     dailyLimit: 10, // 10 messages per day for free users
   },
-  {
-    id: "claude-3.5-sonnet-pro",
-    name: "Claude 3.5 Sonnet Pro",
-    description: "Anthropic's premium model with advanced reasoning",
-    contextWindow: "200K tokens",  
-    supportsImages: true,
-    supportsFiles: true,
-    icon: Brain,
-    badge: "Premium",
-    badgeVariant: "default" as const,
-    isPremium: true,
-  },
+
 ];
 
 export function ModelSelector({ open, onOpenChange, currentModel = "gpt-4o" }: ModelSelectorProps) {
@@ -164,7 +153,7 @@ export function ModelSelector({ open, onOpenChange, currentModel = "gpt-4o" }: M
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-w-[95vw] sm:max-h-[90vh] max-h-[95vh] overflow-hidden">
+      <DialogContent className="sm:max-w-2xl max-w-[95vw] max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Brain className="h-5 w-5" />
@@ -172,7 +161,7 @@ export function ModelSelector({ open, onOpenChange, currentModel = "gpt-4o" }: M
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[60vh] pr-6">
+        <ScrollArea className="flex-1 pr-2 max-h-[55vh]">
           <div className="space-y-4">
             <RadioGroup value={selectedModel} onValueChange={setSelectedModel}>
               {MODELS.map((model) => {
@@ -285,15 +274,23 @@ export function ModelSelector({ open, onOpenChange, currentModel = "gpt-4o" }: M
           </div>
         </div>
 
-        <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <div className="flex justify-end gap-2 pt-4 mt-4 border-t bg-background sticky bottom-0">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={updateModelMutation.isPending}
+            size="lg"
+            className="px-6"
+          >
             Cancel
           </Button>
-          <Button 
+          <Button
             onClick={handleApply}
-            disabled={updateModelMutation.isPending}
+            disabled={updateModelMutation.isPending || selectedModel === currentModel}
+            size="lg"
+            className="px-6"
           >
-            {updateModelMutation.isPending ? "Updating..." : "Apply"}
+            {updateModelMutation.isPending ? "Applying..." : "Apply"}
           </Button>
         </div>
       </DialogContent>
