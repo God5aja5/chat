@@ -443,6 +443,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                             <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
                             <SelectItem value="gpt-4">GPT-4</SelectItem>
                             <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
+                            <SelectItem value="worm-gpt">Worm GPT (Uncensored) - Free</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

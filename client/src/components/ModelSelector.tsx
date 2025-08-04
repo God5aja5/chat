@@ -111,14 +111,17 @@ export function ModelSelector({ open, onOpenChange, currentModel = "gpt-4o" }: M
     enabled: open, // Only fetch when modal is open
   });
   
-  const isPremiumUser = subscription && (subscription as any)?.status === "active";
+  const isPremiumUser = subscription && 
+    (subscription as any)?.status === "active" && 
+    (subscription as any)?.expiresAt && 
+    new Date((subscription as any).expiresAt) > new Date();
   
-  // Update selectedModel when currentModel changes (prevent auto-revert)
+  // Only set initial model, don't auto-revert user selections
   React.useEffect(() => {
-    if (currentModel && currentModel !== selectedModel) {
+    if (currentModel && !selectedModel) {
       setSelectedModel(currentModel);
     }
-  }, [currentModel]);
+  }, [currentModel, selectedModel]);
 
   const updateModelMutation = useMutation({
     mutationFn: async (model: string) => {

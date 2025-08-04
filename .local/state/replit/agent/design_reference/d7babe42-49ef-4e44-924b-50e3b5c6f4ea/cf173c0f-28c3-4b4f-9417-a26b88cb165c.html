@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatGPT Clone - Advanced AI Chat Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        darkMode: 'class',
+        theme: {
+            extend: {
+                colors: {
+                    'chatgpt-green': '#10a37f',
+                    'chatgpt-green-hover': '#0d8f6b',
+                    'dark-bg': '#212121',
+                    'dark-surface': '#2f2f2f',
+                    'dark-border': '#565869',
+                    'light-border': '#e5e7eb'
+                },
+                fontFamily: {
+                    'inter': ['Inter', 'system-ui', 'sans-serif']
+                }
+            }
+        }
+    };
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .message-fade-in {
+            animation: fadeInUp 0.3s ease-out;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .typing-indicator {
+            animation: pulse 1.5s infinite;
+        }
+        
+        .code-block {
+            background: #1e1e1e;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .sidebar-item {
+            transition: all 0.2s ease;
+        }
+        
+        .sidebar-item:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        
+        .dark .sidebar-item:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .scroll-smooth {
+            scroll-behavior: smooth;
+        }
+    </style>
+</head>
+<body class="h-full font-inter bg-white dark:bg-dark-bg text-gray-900 dark:text-gray-100 transition-colors duration-200">
+    <!-- @COMPONENT: MainLayout -->
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- @COMPONENT: Sidebar -->
+        <div id="sidebar" class="flex flex-col w-80 bg-gray-50 dark:bg-dark-surface border-r border-light-border dark:border-dark-border transition-all duration-300">
+            <!-- Sidebar Header -->
+            <div class="flex items-center justify-between p-4 border-b border-light-border dark:border-dark-border">
+                <button id="newChatBtn" class="flex items-center gap-3 px-4 py-2 bg-chatgpt-green hover:bg-chatgpt-green-hover text-white rounded-lg transition-colors duration-200 w-full">
+                    <i class="fas fa-plus"></i>
+                    <span>New chat</span>
+                </button>
+                <button id="sidebarToggle" class="ml-3 p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 md:hidden">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+
+            <!-- Chat History -->
+            <div class="flex-1 overflow-y-auto p-3">
+                <div class="space-y-2">
+                    <!-- @MAP: chatHistory.map(chat => ( -->
+                    <div class="sidebar-item p-3 rounded-lg cursor-pointer group relative" data-mock="true">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium truncate dark:text-gray-200">Advanced React Components</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">2 hours ago</p>
+                            </div>
+                            <div class="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                                <button class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
+                                    <i class="fas fa-edit text-xs"></i>
+                                </button>
+                                <button class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-red-500">
+                                    <i class="fas fa-trash text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-item p-3 rounded-lg cursor-pointer group relative bg-gray-100 dark:bg-gray-700" data-mock="true">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium truncate dark:text-gray-200">API Integration Guide</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Yesterday</p>
+                            </div>
+                            <div class="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                                <button class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
+                                    <i class="fas fa-edit text-xs"></i>
+                                </button>
+                                <button class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-red-500">
+                                    <i class="fas fa-trash text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-item p-3 rounded-lg cursor-pointer group relative" data-mock="true">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium truncate dark:text-gray-200">Database Design Patterns</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">3 days ago</p>
+                            </div>
+                            <div class="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                                <button class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
+                                    <i class="fas fa-edit text-xs"></i>
+                                </button>
+                                <button class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-red-500">
+                                    <i class="fas fa-trash text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @END_MAP -->
+                </div>
+            </div>
+
+            <!-- Sidebar Footer -->
+            <div class="border-t border-light-border dark:border-dark-border p-3 space-y-2">
+                <button id="clearChatsBtn" class="sidebar-item w-full text-left p-3 rounded-lg flex items-center gap-3 text-sm">
+                    <i class="fas fa-trash-alt"></i>
+                    <span>Clear conversations</span>
+                </button>
+                <button id="settingsBtn" class="sidebar-item w-full text-left p-3 rounded-lg flex items-center gap-3 text-sm">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </button>
+                <button id="upgradeBtn" class="sidebar-item w-full text-left p-3 rounded-lg flex items-center gap-3 text-sm">
+                    <i class="fas fa-crown text-yellow-500"></i>
+                    <span>Upgrade plan</span>
+                </button>
+                
+                <!-- User Profile -->
+                <div class="sidebar-item p-3 rounded-lg flex items-center gap-3 cursor-pointer">
+                    <!-- A professional headshot of a person in business attire -->
+                    <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100" alt="User avatar" class="w-8 h-8 rounded-full object-cover">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium truncate" data-bind="user.name">John Doe</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">john@example.com</p>
+                    </div>
+                    <i class="fas fa-ellipsis-h text-gray-400"></i>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: Sidebar -->
+
+        <!-- @COMPONENT: MainChat -->
+        <div class="flex-1 flex flex-col min-w-0">
+            <!-- Chat Header -->
+            <div class="flex items-center justify-between p-4 border-b border-light-border dark:border-dark-border bg-white dark:bg-dark-bg">
+                <div class="flex items-center gap-3">
+                    <button id="mobileSidebarToggle" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg md:hidden">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 class="text-lg font-semibold">ChatGPT</h1>
+                    <div class="flex items-center gap-2 px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-sm">
+                        <i class="fas fa-robot text-chatgpt-green"></i>
+                        <span id="selectedModel" data-bind="selectedModel">GPT-4o</span>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <!-- Model Selector -->
+                    <button id="modelSelectorBtn" class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200">
+                        <i class="fas fa-brain"></i>
+                        <span class="hidden sm:inline">Model</span>
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </button>
+                    
+                    <!-- Theme Toggle -->
+                    <button id="themeToggle" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200">
+                        <i class="fas fa-moon dark:hidden"></i>
+                        <i class="fas fa-sun hidden dark:inline"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Messages Container -->
+            <div id="messagesContainer" class="flex-1 overflow-y-auto scroll-smooth px-4 py-6">
+                <div class="max-w-3xl mx-auto space-y-6">
+                    
+                    <!-- Welcome Message -->
+                    <div class="text-center py-8" data-mock="true">
+                        <div class="w-12 h-12 bg-chatgpt-green rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-robot text-white text-xl"></i>
+                        </div>
+                        <h2 class="text-2xl font-semibold mb-2">How can I help you today?</h2>
+                        <p class="text-gray-600 dark:text-gray-400">Start a conversation with ChatGPT</p>
+                    </div>
+
+                    <!-- Sample Conversation -->
+                    <!-- @MAP: messages.map(message => ( -->
+                    <!-- User Message -->
+                    <div class="message-fade-in" data-mock="true">
+                        <div class="flex items-start gap-4 mb-6">
+                            <div class="w-8 h-8 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-user text-sm"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="group relative">
+                                    <div class="prose dark:prose-invert max-w-none">
+                                        <p>Can you help me create a React component for a file upload with drag and drop functionality?</p>
+                                    </div>
+                                    <div class="opacity-0 group-hover:opacity-100 absolute top-0 right-0 flex items-center gap-1 transition-opacity">
+                                        <button class="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-sm" title="Edit message">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400 mt-2">2:34 PM</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Response -->
+                    <div class="message-fade-in" data-mock="true">
+                        <div class="flex items-start gap-4 mb-6">
+                            <div class="w-8 h-8 bg-chatgpt-green rounded-full flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-robot text-white text-sm"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="group relative">
+                                    <div class="prose dark:prose-invert max-w-none">
+                                        <p>I'll help you create a React component with drag and drop file upload functionality. Here's a comprehensive solution:</p>
+                                        
+                                        <div class="code-block my-4">
+                                            <div class="flex items-center justify-between bg-gray-800 px-4 py-2 text-sm">
+                                                <span class="text-gray-300">FileUpload.jsx</span>
+                                                <button class="text-gray-400 hover:text-white transition-colors" title="Copy code">
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                            <pre class="p-4 text-sm overflow-x-auto"><code class="text-gray-300">import React, { useState, useCallback } from 'react';
+
+const FileUpload = ({ onFileSelect, maxFiles = 5 }) => {
+  const [dragActive, setDragActive] = useState(false);
+  const [files, setFiles] = useState([]);
+
+  const handleDrag = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const newFiles = Array.from(e.dataTransfer.files);
+      setFiles(prev => [...prev, ...newFiles].slice(0, maxFiles));
+      onFileSelect?.(newFiles);
+    }
+  }, [maxFiles, onFileSelect]);
+
+  return (
+    &lt;div 
+      className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+        dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+      }`}
+      onDragEnter={handleDrag}
+      onDragLeave={handleDrag}
+      onDragOver={handleDrag}
+      onDrop={handleDrop}
+    &gt;
+      &lt;div className="space-y-4"&gt;
+        &lt;i className="fas fa-cloud-upload-alt text-4xl text-gray-400" /&gt;
+        &lt;div&gt;
+          &lt;p className="text-lg font-medium"&gt;
+            Drag and drop files here
+          &lt;/p&gt;
+          &lt;p className="text-gray-500"&gt;or click to browse&lt;/p&gt;
+        &lt;/div&gt;
+        &lt;input 
+          type="file" 
+          multiple 
+          className="hidden" 
+          onChange={(e) => {
+            const newFiles = Array.from(e.target.files);
+            setFiles(prev => [...prev, ...newFiles]);
+            onFileSelect?.(newFiles);
+          }}
+        /&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  );
+};
+
+export default FileUpload;</code></pre>
+                                        </div>
+                                        
+                                        <p><strong>Key features:</strong></p>
+                                        <ul>
+                                            <li>Drag and drop interface with visual feedback</li>
+                                            <li>Multiple file selection support</li>
+                                            <li>File limit enforcement</li>
+                                            <li>Clean, accessible design</li>
+                                            <li>TypeScript ready</li>
+                                        </ul>
+
+                                        <p>You can use it like this:</p>
+                                        
+                                        <div class="code-block my-4">
+                                            <div class="flex items-center justify-between bg-gray-800 px-4 py-2 text-sm">
+                                                <span class="text-gray-300">Usage Example</span>
+                                                <button class="text-gray-400 hover:text-white transition-colors" title="Copy code">
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                            <pre class="p-4 text-sm overflow-x-auto"><code class="text-gray-300">&lt;FileUpload 
+  onFileSelect={(files) => console.log('Selected files:', files)}
+  maxFiles={10}
+/&gt;</code></pre>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="opacity-0 group-hover:opacity-100 flex items-center gap-2 mt-4 transition-opacity">
+                                        <button class="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-sm flex items-center gap-1" title="Copy message">
+                                            <i class="fas fa-copy"></i>
+                                            <span>Copy</span>
+                                        </button>
+                                        <button class="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-sm flex items-center gap-1" title="Regenerate response">
+                                            <i class="fas fa-redo"></i>
+                                            <span>Regenerate</span>
+                                        </button>
+                                        <button class="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-sm flex items-center gap-1" title="Share message">
+                                            <i class="fas fa-share"></i>
+                                            <span>Share</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400 mt-2">2:35 PM</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Typing Indicator -->
+                    <div id="typingIndicator" class="hidden">
+                        <div class="flex items-start gap-4 mb-6">
+                            <div class="w-8 h-8 bg-chatgpt-green rounded-full flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-robot text-white text-sm"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                                    <div class="typing-indicator">
+                                        <i class="fas fa-circle text-xs"></i>
+                                        <i class="fas fa-circle text-xs" style="animation-delay: 0.2s;"></i>
+                                        <i class="fas fa-circle text-xs" style="animation-delay: 0.4s;"></i>
+                                    </div>
+                                    <span class="text-sm">ChatGPT is typing...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @END_MAP -->
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="border-t border-light-border dark:border-dark-border bg-white dark:bg-dark-bg p-4">
+                <div class="max-w-3xl mx-auto">
+                    <!-- File Upload Preview Area -->
+                    <div id="filePreview" class="hidden mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <i class="fas fa-file text-gray-500"></i>
+                                <div>
+                                    <p class="text-sm font-medium" data-implementation="Display uploaded file name">document.pdf</p>
+                                    <p class="text-xs text-gray-500">2.3 MB</p>
+                                </div>
+                            </div>
+                            <button class="text-gray-500 hover:text-red-500 transition-colors">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <div class="flex items-end gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-light-border dark:border-dark-border">
+                            <!-- File Upload Button -->
+                            <button id="fileUploadBtn" class="flex-shrink-0 p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+                                <i class="fas fa-paperclip"></i>
+                            </button>
+                            
+                            <!-- Text Input -->
+                            <div class="flex-1 min-w-0">
+                                <textarea 
+                                    id="messageInput" 
+                                    placeholder="Message ChatGPT..."
+                                    class="w-full max-h-32 resize-none bg-transparent border-none outline-none text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+                                    rows="1"
+                                    data-event="input:handleInputChange,keydown:handleKeyDown"
+                                ></textarea>
+                            </div>
+                            
+                            <!-- Send Button -->
+                            <button id="sendBtn" class="flex-shrink-0 p-2 bg-chatgpt-green hover:bg-chatgpt-green-hover text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed" disabled data-event="click:handleSendMessage">
+                                <i class="fas fa-arrow-up"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Message Counter -->
+                        <div class="flex items-center justify-center mt-2 text-xs text-gray-500 dark:text-gray-400">
+                            <span>ChatGPT can make mistakes. Check important info.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: MainChat -->
+
+        <!-- Hidden File Input -->
+        <input type="file" id="hiddenFileInput" class="hidden" multiple accept="*/*" data-implementation="Handle file selection and preview">
+    </div>
+
+    <!-- @COMPONENT: ModelSelectorModal -->
+    <div id="modelSelectorModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-dark-surface rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div class="p-6">
+                <h3 class="text-lg font-semibold mb-4">Select Model</h3>
+                <div class="space-y-3">
+                    <label class="flex items-center p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors">
+                        <input type="radio" name="model" value="gpt-4o" checked class="text-chatgpt-green">
+                        <div class="ml-3">
+                            <div class="font-medium">GPT-4o</div>
+                            <div class="text-sm text-gray-500">Latest model with enhanced capabilities</div>
+                        </div>
+                    </label>
+                    <label class="flex items-center p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors">
+                        <input type="radio" name="model" value="gpt-4-turbo" class="text-chatgpt-green">
+                        <div class="ml-3">
+                            <div class="font-medium">GPT-4 Turbo</div>
+                            <div class="text-sm text-gray-500">Faster and more efficient</div>
+                        </div>
+                    </label>
+                    <label class="flex items-center p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors">
+                        <input type="radio" name="model" value="gpt-4" class="text-chatgpt-green">
+                        <div class="ml-3">
+                            <div class="font-medium">GPT-4</div>
+                            <div class="text-sm text-gray-500">Standard GPT-4 model</div>
+                        </div>
+                    </label>
+                    <label class="flex items-center p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors">
+                        <input type="radio" name="model" value="gpt-3.5-turbo" class="text-chatgpt-green">
+                        <div class="ml-3">
+                            <div class="font-medium">GPT-3.5 Turbo</div>
+                            <div class="text-sm text-gray-500">Fast and cost-effective</div>
+                        </div>
+                    </label>
+                </div>
+                <div class="flex justify-end gap-3 mt-6">
+                    <button id="cancelModelSelection" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">Cancel</button>
+                    <button id="confirmModelSelection" class="px-4 py-2 bg-chatgpt-green hover:bg-chatgpt-green-hover text-white rounded-lg transition-colors">Apply</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: ModelSelectorModal -->
+
+    <!-- @COMPONENT: SettingsModal -->
+    <div id="settingsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-dark-surface rounded-xl shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden">
+            <div class="flex h-full">
+                <!-- Settings Navigation -->
+                <div class="w-64 bg-gray-50 dark:bg-gray-800 p-6 border-r border-light-border dark:border-dark-border">
+                    <h3 class="text-lg font-semibold mb-6">Settings</h3>
+                    <nav class="space-y-2">
+                        <button class="settings-nav-item w-full text-left p-3 rounded-lg bg-white dark:bg-dark-surface border transition-colors" data-tab="general">
+                            <i class="fas fa-cog mr-3"></i>General
+                        </button>
+                        <button class="settings-nav-item w-full text-left p-3 rounded-lg hover:bg-white dark:hover:bg-dark-surface transition-colors" data-tab="model">
+                            <i class="fas fa-brain mr-3"></i>Model & Behavior
+                        </button>
+                        <button class="settings-nav-item w-full text-left p-3 rounded-lg hover:bg-white dark:hover:bg-dark-surface transition-colors" data-tab="safety">
+                            <i class="fas fa-shield-alt mr-3"></i>Code Safety
+                        </button>
+                        <button class="settings-nav-item w-full text-left p-3 rounded-lg hover:bg-white dark:hover:bg-dark-surface transition-colors" data-tab="artifacts">
+                            <i class="fas fa-cube mr-3"></i>Artifacts
+                        </button>
+                        <button class="settings-nav-item w-full text-left p-3 rounded-lg hover:bg-white dark:hover:bg-dark-surface transition-colors" data-tab="api">
+                            <i class="fas fa-key mr-3"></i>API Keys
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Settings Content -->
+                <div class="flex-1 overflow-y-auto">
+                    <div class="p-6">
+                        <!-- General Settings -->
+                        <div id="generalSettings" class="settings-panel">
+                            <h4 class="text-xl font-semibold mb-6">General Settings</h4>
+                            
+                            <div class="space-y-6">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Theme</label>
+                                    <div class="flex gap-3">
+                                        <label class="flex items-center">
+                                            <input type="radio" name="theme" value="light" class="text-chatgpt-green">
+                                            <span class="ml-2">Light</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="theme" value="dark" checked class="text-chatgpt-green">
+                                            <span class="ml-2">Dark</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="theme" value="auto" class="text-chatgpt-green">
+                                            <span class="ml-2">Auto</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Language</label>
+                                    <select class="w-full p-3 border border-light-border dark:border-dark-border rounded-lg bg-white dark:bg-dark-surface">
+                                        <option>English</option>
+                                        <option>Spanish</option>
+                                        <option>French</option>
+                                        <option>German</option>
+                                    </select>
+                                </div>
+
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h5 class="font-medium">Chat History</h5>
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">Save and sync chat history</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="sr-only peer" checked>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-chatgpt-green"></div>
+                                    </label>
+                                </div>
+
+                                <div class="pt-4 border-t border-light-border dark:border-dark-border">
+                                    <button class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors">
+                                        <i class="fas fa-trash mr-2"></i>Clear all data
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Model & Behavior Settings -->
+                        <div id="modelSettings" class="settings-panel hidden">
+                            <h4 class="text-xl font-semibold mb-6">Model & Behavior</h4>
+                            
+                            <div class="space-y-6">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Default Model</label>
+                                    <select class="w-full p-3 border border-light-border dark:border-dark-border rounded-lg bg-white dark:bg-dark-surface">
+                                        <option>GPT-4o</option>
+                                        <option>GPT-4 Turbo</option>
+                                        <option>GPT-4</option>
+                                        <option>GPT-3.5 Turbo</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Temperature: <span id="tempValue">0.7</span></label>
+                                    <input type="range" min="0" max="1" step="0.1" value="0.7" class="w-full" data-implementation="Update temperature value display">
+                                    <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                        <span>Focused</span>
+                                        <span>Creative</span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Max Tokens: <span id="tokensValue">2048</span></label>
+                                    <input type="range" min="256" max="4096" step="256" value="2048" class="w-full" data-implementation="Update tokens value display">
+                                </div>
+
+                                <div class="space-y-4">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <h5 class="font-medium">Streaming Responses</h5>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">Show responses as they're generated</p>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" class="sr-only peer" checked>
+                                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-chatgpt-green"></div>
+                                        </label>
+                                    </div>
+
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <h5 class="font-medium">Code Rendering</h5>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">Enable syntax highlighting</p>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" class="sr-only peer" checked>
+                                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-chatgpt-green"></div>
+                                        </label>
+                                    </div>
+
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <h5 class="font-medium">Markdown & LaTeX</h5>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">Render formatted text and math</p>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" class="sr-only peer" checked>
+                                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-chatgpt-green"></div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Code Safety Settings -->
+                        <div id="safetySettings" class="settings-panel hidden">
+                            <h4 class="text-xl font-semibold mb-6">Code Safety & Developer Mode</h4>
+                            
+                            <div class="space-y-6">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h5 class="font-medium">Prevent Full Code Overwrites</h5>
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">Only show diff/update changed blocks</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="sr-only peer" checked>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-chatgpt-green"></div>
+                                    </label>
+                                </div>
+
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h5 class="font-medium">Line-by-line Annotations</h5>
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">Show code explanations inline</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-chatgpt-green"></div>
+                                    </label>
+                                </div>
+
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h5 class="font-medium">Diff Viewer</h5>
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">Show changes before applying</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="sr-only peer" checked>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-chatgpt-green"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Artifacts Settings -->
+                        <div id="artifactsSettings" class="settings-panel hidden">
+                            <h4 class="text-xl font-semibold mb-6">Artifacts & Assets</h4>
+                            
+                            <div class="space-y-6">
+                                <div>
+                                    <h5 class="font-medium mb-3">Generated Artifacts</h5>
+                                    <div class="border border-light-border dark:border-dark-border rounded-lg">
+                                        <div class="p-4 border-b border-light-border dark:border-dark-border flex items-center justify-between" data-mock="true">
+                                            <div class="flex items-center gap-3">
+                                                <i class="fas fa-file-code text-blue-500"></i>
+                                                <div>
+                                                    <p class="font-medium">FileUpload.jsx</p>
+                                                    <p class="text-sm text-gray-500">React Component • v2</p>
+                                                </div>
+                                            </div>
+                                            <button class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                                                <i class="fas fa-download"></i>
+                                            </button>
+                                        </div>
+                                        <div class="p-4 flex items-center justify-between" data-mock="true">
+                                            <div class="flex items-center gap-3">
+                                                <i class="fas fa-file-alt text-green-500"></i>
+                                                <div>
+                                                    <p class="font-medium">API Documentation</p>
+                                                    <p class="text-sm text-gray-500">Markdown • v1</p>
+                                                </div>
+                                            </div>
+                                            <button class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                                                <i class="fas fa-download"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex gap-3">
+                                    <button class="flex-1 p-3 border border-light-border dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                        <i class="fas fa-download mr-2"></i>Export All
+                                    </button>
+                                    <button class="flex-1 p-3 border border-red-300 dark:border-red-600 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                                        <i class="fas fa-trash mr-2"></i>Clear All
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- API Settings -->
+                        <div id="apiSettings" class="settings-panel hidden">
+                            <h4 class="text-xl font-semibold mb-6">API Configuration</h4>
+                            
+                            <div class="space-y-6">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">OpenAI API Key</label>
+                                    <div class="relative">
+                                        <input type="password" placeholder="sk-..." class="w-full p-3 pr-12 border border-light-border dark:border-dark-border rounded-lg bg-white dark:bg-dark-surface" data-implementation="Store API key securely">
+                                        <button class="absolute right-3 top-3 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" title="Toggle visibility">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Your API key is stored locally and never shared</p>
+                                </div>
+
+                                <div class="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-700">
+                                    <div class="flex items-start gap-3">
+                                        <i class="fas fa-exclamation-triangle text-yellow-600 dark:text-yellow-400 mt-0.5"></i>
+                                        <div>
+                                            <h5 class="font-medium text-yellow-800 dark:text-yellow-200">API Usage Warning</h5>
+                                            <p class="text-sm text-yellow-700 dark:text-yellow-300 mt-1">Using your own API key will incur charges on your OpenAI account. Monitor your usage to avoid unexpected costs.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h5 class="font-medium mb-3">Usage Statistics</h5>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">Tokens Used Today</p>
+                                            <p class="text-xl font-semibold" data-mock="true">2,847</p>
+                                        </div>
+                                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">Estimated Cost</p>
+                                            <p class="text-xl font-semibold" data-mock="true">$0.42</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Settings Footer -->
+                    <div class="border-t border-light-border dark:border-dark-border p-6 bg-gray-50 dark:bg-gray-800">
+                        <div class="flex justify-end gap-3">
+                            <button id="cancelSettings" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">Cancel</button>
+                            <button id="saveSettings" class="px-4 py-2 bg-chatgpt-green hover:bg-chatgpt-green-hover text-white rounded-lg transition-colors">Save Changes</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: SettingsModal -->
+
+    <!-- @COMPONENT: ShareModal -->
+    <div id="shareModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-dark-surface rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div class="p-6">
+                <h3 class="text-lg font-semibold mb-4">Share Message</h3>
+                <div class="space-y-3">
+                    <button class="w-full p-3 text-left rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-3">
+                        <i class="fas fa-link text-blue-500"></i>
+                        <span>Copy message link</span>
+                    </button>
+                    <button class="w-full p-3 text-left rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-3">
+                        <i class="fas fa-download text-green-500"></i>
+                        <span>Download as .txt</span>
+                    </button>
+                    <button class="w-full p-3 text-left rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-3">
+                        <i class="fas fa-image text-purple-500"></i>
+                        <span>Export as image</span>
+                    </button>
+                </div>
+                <div class="flex justify-end gap-3 mt-6">
+                    <button id="cancelShare" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: ShareModal -->
+
+    <script>
+        // Theme Management
+        (function() {
+            const themeToggle = document.getElementById('themeToggle');
+            const html = document.documentElement;
+            
+            // Initialize theme
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            if (savedTheme === 'dark') {
+                html.classList.add('dark');
+            } else {
+                html.classList.remove('dark');
+            }
+            
+            themeToggle?.addEventListener('click', () => {
+                const isDark = html.classList.contains('dark');
+                if (isDark) {
+                    html.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                } else {
+                    html.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                }
+            });
+        })();
+
+        // Modal Management
+        (function() {
+            const modals = ['modelSelectorModal', 'settingsModal', 'shareModal'];
+            
+            function showModal(modalId) {
+                document.getElementById(modalId)?.classList.remove('hidden');
+            }
+            
+            function hideModal(modalId) {
+                document.getElementById(modalId)?.classList.add('hidden');
+            }
+            
+            // Modal triggers
+            document.getElementById('modelSelectorBtn')?.addEventListener('click', () => showModal('modelSelectorModal'));
+            document.getElementById('settingsBtn')?.addEventListener('click', () => showModal('settingsModal'));
+            
+            // Modal close buttons
+            document.getElementById('cancelModelSelection')?.addEventListener('click', () => hideModal('modelSelectorModal'));
+            document.getElementById('cancelSettings')?.addEventListener('click', () => hideModal('settingsModal'));
+            document.getElementById('cancelShare')?.addEventListener('click', () => hideModal('shareModal'));
+            
+            // Click outside to close
+            modals.forEach(modalId => {
+                document.getElementById(modalId)?.addEventListener('click', (e) => {
+                    if (e.target.id === modalId) {
+                        hideModal(modalId);
+                    }
+                });
+            });
+        })();
+
+        // Settings Navigation
+        (function() {
+            const navItems = document.querySelectorAll('.settings-nav-item');
+            const panels = document.querySelectorAll('.settings-panel');
+            
+            navItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    const targetTab = item.dataset.tab;
+                    
+                    // Update nav appearance
+                    navItems.forEach(nav => {
+                        nav.classList.remove('bg-white', 'dark:bg-dark-surface', 'border');
+                        nav.classList.add('hover:bg-white', 'dark:hover:bg-dark-surface');
+                    });
+                    item.classList.add('bg-white', 'dark:bg-dark-surface', 'border');
+                    item.classList.remove('hover:bg-white', 'dark:hover:bg-dark-surface');
+                    
+                    // Show corresponding panel
+                    panels.forEach(panel => panel.classList.add('hidden'));
+                    document.getElementById(targetTab + 'Settings')?.classList.remove('hidden');
+                });
+            });
+        })();
+
+        // Message Input Handling
+        (function() {
+            const messageInput = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendBtn');
+            
+            function updateSendButton() {
+                const hasText = messageInput?.value.trim();
+                if (sendBtn) {
+                    sendBtn.disabled = !hasText;
+                    sendBtn.classList.toggle('opacity-50', !hasText);
+                    sendBtn.classList.toggle('cursor-not-allowed', !hasText);
+                }
+            }
+            
+            messageInput?.addEventListener('input', () => {
+                updateSendButton();
+                // Auto-resize textarea
+                messageInput.style.height = 'auto';
+                messageInput.style.height = Math.min(messageInput.scrollHeight, 128) + 'px';
+            });
+            
+            messageInput?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (messageInput.value.trim()) {
+                        // TODO: Implement send message functionality
+                        console.log('Sending message:', messageInput.value);
+                        messageInput.value = '';
+                        updateSendButton();
+                    }
+                }
+            });
+            
+            sendBtn?.addEventListener('click', () => {
+                if (messageInput?.value.trim()) {
+                    // TODO: Implement send message functionality
+                    console.log('Sending message:', messageInput.value);
+                    messageInput.value = '';
+                    updateSendButton();
+                }
+            });
+        })();
+
+        // File Upload Handling
+        (function() {
+            const fileUploadBtn = document.getElementById('fileUploadBtn');
+            const hiddenFileInput = document.getElementById('hiddenFileInput');
+            const filePreview = document.getElementById('filePreview');
+            
+            fileUploadBtn?.addEventListener('click', () => {
+                hiddenFileInput?.click();
+            });
+            
+            hiddenFileInput?.addEventListener('change', (e) => {
+                const files = e.target.files;
+                if (files && files.length > 0) {
+                    // TODO: Implement file preview and storage
+                    console.log('Files selected:', files);
+                    filePreview?.classList.remove('hidden');
+                }
+            });
+        })();
+
+        // Sidebar Management
+        (function() {
+            const sidebar = document.getElementById('sidebar');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const mobileSidebarToggle = document.getElementById('mobileSidebarToggle');
+            
+            function toggleSidebar() {
+                sidebar?.classList.toggle('-translate-x-full');
+            }
+            
+            sidebarToggle?.addEventListener('click', toggleSidebar);
+            mobileSidebarToggle?.addEventListener('click', toggleSidebar);
+        })();
+
+        // Auto-scroll to bottom
+        (function() {
+            const messagesContainer = document.getElementById('messagesContainer');
+            
+            function scrollToBottom() {
+                if (messagesContainer) {
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+            }
+            
+            // Scroll to bottom on load
+            setTimeout(scrollToBottom, 100);
+        })();
+
+        // Copy functionality placeholder
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('[title="Copy code"]') || e.target.closest('[title="Copy message"]')) {
+                // TODO: Implement copy to clipboard
+                console.log('Copy functionality triggered');
+                // Show temporary success message
+                const btn = e.target.closest('button');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                }, 2000);
+            }
+        });
+
+        // Initialize app
+        console.log('ChatGPT Clone initialized');
+        // TODO: Load chat history from localStorage
+        // TODO: Initialize OpenAI API client
+        // TODO: Set up real-time message streaming
+    </script>
+</body>
+</html>

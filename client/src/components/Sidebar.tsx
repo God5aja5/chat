@@ -342,11 +342,8 @@ export function Sidebar({ isOpen, onToggle, onSettingsOpen, className }: Sidebar
                 <p className="text-sm font-medium truncate">
                   {user?.firstName} {user?.lastName}
                 </p>
-                {/* Premium Crown Indicator */}
-                <Crown className="h-3 w-3 text-yellow-500" />
               </div>
               <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-              <p className="text-xs text-green-600 font-medium">Premium Active</p>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
