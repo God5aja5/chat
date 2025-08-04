@@ -305,8 +305,7 @@ export const modelCapabilitiesRelations = relations(modelCapabilities, ({ many }
 // Zod schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   email: true,
-  firstName: true,
-  lastName: true,
+  name: true,
   profileImageUrl: true,
 });
 
