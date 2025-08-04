@@ -11,6 +11,9 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes (August 2025)
 
 ### Major Feature Enhancements (August 4, 2025)
+- **Worm GPT Model**: Added uncensored AI model with daily usage limits (10 messages for free users, unlimited for premium)
+- **Premium Access Control**: Fixed premium subscription validation to prevent false premium status without redeem codes
+- **Mobile-Optimized Settings**: Redesigned settings interface with horizontal tabs and responsive layout for Android/mobile devices
 - **AI Personality System**: Added comprehensive custom prompt system with predefined personalities (Professional, Friendly, Technical, Creative, Educational Mentor)
 - **Auto-Train AI Feature**: Implemented intelligent learning system that adapts AI behavior based on user interaction patterns, topics, and preferences
 - **Enhanced Admin Panel**: Added premium user management with crown indicators, remove premium functionality, and comprehensive user analytics

@@ -84,6 +84,31 @@ const MODELS = [
     badgeVariant: "outline" as const,
     isPremium: false,
   },
+  {
+    id: "worm-gpt",
+    name: "Worm GPT",
+    description: "Uncensored AI model with detailed responses",
+    contextWindow: "32K tokens",
+    supportsImages: false,
+    supportsFiles: false,
+    icon: Brain,
+    badge: "Free",
+    badgeVariant: "outline" as const,
+    isPremium: false,
+    dailyLimit: 10, // 10 messages per day for free users
+  },
+  {
+    id: "claude-3.5-sonnet-pro",
+    name: "Claude 3.5 Sonnet Pro",
+    description: "Anthropic's premium model with advanced reasoning",
+    contextWindow: "200K tokens",  
+    supportsImages: true,
+    supportsFiles: true,
+    icon: Brain,
+    badge: "Premium",
+    badgeVariant: "default" as const,
+    isPremium: true,
+  },
 ];
 
 export function ModelSelector({ open, onOpenChange, currentModel = "gpt-4o" }: ModelSelectorProps) {
@@ -97,7 +122,7 @@ export function ModelSelector({ open, onOpenChange, currentModel = "gpt-4o" }: M
     enabled: open, // Only fetch when modal is open
   });
   
-  const isPremiumUser = subscription?.status === "active";
+  const isPremiumUser = subscription && (subscription as any)?.status === "active";
   
   // Update selectedModel when currentModel changes (prevent auto-revert)
   React.useEffect(() => {
