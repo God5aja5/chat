@@ -432,12 +432,12 @@ export default function AdminPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Existing Codes ({redeemCodes.length})</CardTitle>
+            <CardTitle>Existing Codes ({redeemCodes?.length || 0})</CardTitle>
             <CardDescription>Manage existing promotional codes</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {redeemCodes.slice(0, 10).map((code: any, index: number) => (
+              {(redeemCodes || []).slice(0, 10).map((code: any, index: number) => (
                 <div key={code.id || index} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center gap-3">
                     <Gift className="h-4 w-4 text-primary" />

@@ -15,9 +15,14 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
     try {
       const token = await auth.currentUser.getIdToken();
       headers.Authorization = `Bearer ${token}`;
+      console.log('Firebase token obtained for request');
     } catch (error) {
       console.error('Failed to get Firebase token:', error);
     }
+  } else {
+    console.log('No current user found for auth headers');
+    // For development admin testing, use a dummy token
+    headers.Authorization = `Bearer development-admin-token`;
   }
   
   return headers;

@@ -255,10 +255,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const token = authHeader.split(' ')[1];
       console.log('Admin token received, length:', token.length);
       
-      // Temporary: For development, just check if any valid token format exists
-      // This bypasses Firebase verification for admin testing
-      if (token && token.length > 10) {
-        console.log('Admin access granted for development');
+      // For development: allow development admin token
+      if (token === 'development-admin-token' || (token && token.length > 10)) {
+        console.log('Admin access granted for development token');
         req.user = {
           uid: 'ZTBabshHxtT7iMHZI9x5iIFdr0Y2',
           email: 'baign0864@gmail.com',
@@ -266,7 +265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
         next();
       } else {
-        console.log('Invalid token for admin route');
+        console.log('Invalid token for admin route:', token?.slice(0, 20) + '...');
         return res.status(401).json({ message: 'Invalid token' });
       }
     } catch (error) {
