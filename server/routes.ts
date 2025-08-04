@@ -320,6 +320,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin subscription management
+  app.post("/api/admin/subscriptions/:subscriptionId/cancel", requireAdmin, async (req, res) => {
+    try {
+      const { subscriptionId } = req.params;
+      await storage.cancelSubscription(subscriptionId);
+      res.json({ success: true, message: "Subscription cancelled successfully" });
+    } catch (error) {
+      console.error("Error cancelling subscription:", error);
+      res.status(500).json({ error: "Failed to cancel subscription" });
+    }
+  });
+
+  app.post("/api/admin/users/:userId/remove-premium", requireAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      await storage.removeUserPremium(userId);
+      res.json({ success: true, message: "Premium access removed successfully" });
+    } catch (error) {
+      console.error("Error removing premium access:", error);
+      res.status(500).json({ error: "Failed to remove premium access" });
+    }
+  });
+
   // Admin redeem codes endpoints
   app.get("/api/admin/redeem-codes", requireAdmin, async (req, res) => {
     try {
@@ -564,10 +587,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get conversation history BEFORE creating assistant message
       const messages = await storage.getChatMessages(currentChatId);
-      const conversationHistory = messages.map(msg => ({
+      
+      // Get user settings for auto-train and custom prompt
+      const settings = await storage.getUserSettings(userId);
+      
+      // Build conversation history with custom prompt and auto-train
+      let conversationHistory: Array<{ role: "user" | "assistant" | "system", content: string }> = [];
+      
+      // Add custom system prompt if available
+      if (settings?.customPrompt) {
+        conversationHistory.push({
+          role: "system",
+          content: settings.customPrompt
+        });
+      }
+      
+      // Add auto-train system prompt if enabled
+      if (settings?.autoTrainEnabled && settings?.autoTrainData) {
+        try {
+          const autoTrainData = JSON.parse(settings.autoTrainData);
+          const autoTrainPrompt = `Based on your previous interactions, I've learned that you prefer: ${autoTrainData.style || 'helpful'} responses about ${autoTrainData.interests?.join(', ') || 'various topics'}. I'll adjust my responses accordingly.`;
+          conversationHistory.push({
+            role: "system", 
+            content: autoTrainPrompt
+          });
+        } catch (e) {
+          // Invalid auto-train data, skip
+        }
+      }
+      
+      // Add message history
+      conversationHistory = [...conversationHistory, ...messages.map(msg => ({
         role: msg.role as "user" | "assistant" | "system",
         content: msg.content,
-      }));
+      }))];
 
       // Debug logging
       console.log(`Chat ${currentChatId}: Found ${messages.length} messages for history`);
@@ -651,6 +704,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               type: "chat",
               count: 1,
             });
+
+            // Update auto-train data if enabled
+            if (settings?.autoTrainEnabled) {
+              await storage.updateAutoTrainData(userId, content, "chat");
+            }
             
             // Send chat info if this was a new chat
             if (!chatId) {

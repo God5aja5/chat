@@ -38,7 +38,8 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  UserPlus
+  UserPlus,
+  Crown
 } from 'lucide-react';
 
 interface AdminStats {
@@ -128,6 +129,25 @@ export default function AdminPage() {
     },
     onError: () => {
       toast({ title: 'Error', description: 'Failed to generate redeem codes', variant: 'destructive' });
+    },
+  });
+
+  // Remove premium mutation
+  const removePremiumMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await fetch(`/api/admin/users/${userId}/remove-premium`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) throw new Error('Failed to remove premium');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      toast({ title: 'Success', description: 'Premium access removed successfully!' });
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to remove premium access', variant: 'destructive' });
     },
   });
 
@@ -279,14 +299,32 @@ export default function AdminPage() {
                     <Users className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="font-medium">{user.name || `User ${index + 1}`}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{user.name || `User ${index + 1}`}</p>
+                      {(user.subscription === "Premium" || user.isAdmin) && (
+                        <Crown className="h-3 w-3 text-yellow-500" />
+                      )}
+                    </div>
                     <p className="text-sm text-muted-foreground">{user.email || `user${index + 1}@example.com`}</p>
+                    {user.subscription === "Premium" && (
+                      <p className="text-xs text-green-600 font-medium">Premium Active</p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={user.subscription ? "default" : "secondary"}>
+                  <Badge variant={user.subscription === "Premium" ? "default" : "secondary"}>
                     {user.subscription || "Free"}
                   </Badge>
+                  {user.subscription === "Premium" && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => removePremiumMutation.mutate(user.id)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      Remove Premium
+                    </Button>
+                  )}
                   <Button variant="ghost" size="sm">
                     <Eye className="h-4 w-4" />
                   </Button>

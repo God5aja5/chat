@@ -139,6 +139,13 @@ export interface IStorage {
   // Data management
   deleteUserData(userId: string): Promise<void>;
   
+  // Premium management
+  cancelSubscription(subscriptionId: string): Promise<void>;
+  removeUserPremium(userId: string): Promise<void>;
+  
+  // Auto-train functionality
+  updateAutoTrainData(userId: string, content: string, interaction_type: string): Promise<void>;
+  
   // Admin data access methods
   getAllUsers(): Promise<User[]>;
   getAllChats(): Promise<Chat[]>;
@@ -797,6 +804,97 @@ export class DatabaseStorage implements IStorage {
     await db.delete(subscriptions).where(eq(subscriptions.userId, userId));
     await db.delete(usageTracking).where(eq(usageTracking.userId, userId));
     // Note: We don't delete the user record itself as it's managed by auth
+  }
+
+  // Premium management
+  async cancelSubscription(subscriptionId: string): Promise<void> {
+    await db.update(subscriptions).set({
+      status: "cancelled",
+      updatedAt: new Date(),
+    }).where(eq(subscriptions.id, subscriptionId));
+  }
+
+  async removeUserPremium(userId: string): Promise<void> {
+    // Cancel all active subscriptions for the user
+    await db.update(subscriptions).set({
+      status: "cancelled",
+      updatedAt: new Date(),
+    }).where(and(
+      eq(subscriptions.userId, userId),
+      eq(subscriptions.status, "active")
+    ));
+  }
+
+  // Auto-train functionality
+  async updateAutoTrainData(userId: string, content: string, interaction_type: string): Promise<void> {
+    try {
+      // Get existing settings
+      let settings = await this.getUserSettings(userId);
+      
+      if (!settings) {
+        // Create default settings if none exist
+        settings = await this.upsertUserSettings(userId, { autoTrainEnabled: true });
+      }
+
+      if (!settings.autoTrainEnabled) {
+        return; // Auto-train is disabled
+      }
+
+      // Parse existing auto-train data
+      let autoTrainData: any = {};
+      try {
+        autoTrainData = settings.autoTrainData ? JSON.parse(settings.autoTrainData) : {};
+      } catch (e) {
+        autoTrainData = {};
+      }
+
+      // Initialize data structure
+      if (!autoTrainData.interactions) autoTrainData.interactions = 0;
+      if (!autoTrainData.interests) autoTrainData.interests = [];
+      if (!autoTrainData.style) autoTrainData.style = "helpful";
+      if (!autoTrainData.topics) autoTrainData.topics = {};
+
+      // Update interaction count
+      autoTrainData.interactions = (autoTrainData.interactions || 0) + 1;
+
+      // Analyze content for interests and topics
+      const words = content.toLowerCase().split(/\s+/);
+      const topics = ["programming", "ai", "web development", "javascript", "python", "react", "node", "database"];
+      
+      for (const topic of topics) {
+        if (content.toLowerCase().includes(topic)) {
+          autoTrainData.topics[topic] = (autoTrainData.topics[topic] || 0) + 1;
+        }
+      }
+
+      // Update top interests based on topics
+      const topTopics = Object.entries(autoTrainData.topics)
+        .sort(([, a], [, b]) => (b as number) - (a as number))
+        .slice(0, 3)
+        .map(([topic]) => topic);
+      
+      autoTrainData.interests = topTopics;
+
+      // Determine style based on interaction patterns
+      if (autoTrainData.interactions > 5) {
+        if (autoTrainData.topics.programming > 3) {
+          autoTrainData.style = "technical";
+        } else if (content.length > 100) {
+          autoTrainData.style = "detailed";
+        } else {
+          autoTrainData.style = "concise";
+        }
+      }
+
+      // Save updated auto-train data
+      await this.upsertUserSettings(userId, {
+        autoTrainData: JSON.stringify(autoTrainData)
+      });
+
+    } catch (error) {
+      console.error("Error updating auto-train data:", error);
+      // Don't throw error - auto-train is optional feature
+    }
   }
 
   // Enhanced redeem code generation with flexible duration

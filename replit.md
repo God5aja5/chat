@@ -10,6 +10,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (August 2025)
 
+### Major Feature Enhancements (August 4, 2025)
+- **AI Personality System**: Added comprehensive custom prompt system with predefined personalities (Professional, Friendly, Technical, Creative, Educational Mentor)
+- **Auto-Train AI Feature**: Implemented intelligent learning system that adapts AI behavior based on user interaction patterns, topics, and preferences
+- **Enhanced Admin Panel**: Added premium user management with crown indicators, remove premium functionality, and comprehensive user analytics
+- **Custom System Prompts**: Users can define personalized AI assistant personalities through custom prompts in settings
+- **Advanced Auto-Training**: AI automatically learns user preferences, response styles, and topic interests to provide better personalized responses
+
 ### Chat History Fix (August 4, 2025)
 - **Fixed Conversation Context**: Corrected message ordering in OpenAI API calls to include full conversation history
 - **Database Schema Validation**: Fixed schema validation errors in shared/schema.ts for user insert operations
@@ -38,6 +45,8 @@ Preferred communication style: Simple, everyday language.
 - Added premium plans, subscriptions, contact messages, admin users, and redeem codes tables
 - Implemented usage tracking for both chat and image generation
 - Added proper relationships and constraints for data integrity
+- **AI Personality Fields**: Added customPrompt, autoTrainEnabled, and autoTrainData to user settings for personalization
+- **Admin Management**: Enhanced subscription management with cancellation and premium removal capabilities
 
 ### New Pages and Components
 - `/pricing` - Premium plan pricing page with subscription management

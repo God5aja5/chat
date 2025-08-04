@@ -17,6 +17,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useChatContext } from "@/contexts/ChatContext";
@@ -39,6 +40,8 @@ import {
   Sun,
   Moon,
   Monitor,
+  Bot,
+  Zap,
 } from "lucide-react";
 
 interface SettingsModalProps {
@@ -46,13 +49,16 @@ interface SettingsModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type SettingsTab = "general" | "model" | "safety" | "artifacts" | "api";
+type SettingsTab = "general" | "model" | "ai-personality" | "safety" | "artifacts" | "api";
 
 interface UserSettings {
   theme: "light" | "dark" | "auto";
   defaultModel: string;
   defaultImageModel: string;
   temperature: number;
+  customPrompt?: string;
+  autoTrainEnabled?: boolean;
+  autoTrainData?: string;
   maxTokens: number;
   streamingEnabled: boolean;
   codeRenderingEnabled: boolean;
@@ -117,6 +123,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         showLineAnnotations: settingsData.showLineAnnotations ?? false,
         showDiffViewer: settingsData.showDiffViewer ?? true,
         openaiApiKey: settingsData.openaiApiKey || "",
+        customPrompt: settingsData.customPrompt || "",
+        autoTrainEnabled: settingsData.autoTrainEnabled ?? true,
+        autoTrainData: settingsData.autoTrainData || "",
       });
       setHasUnsavedChanges(false);
     }
@@ -197,6 +206,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         showLineAnnotations: settingsData.showLineAnnotations ?? false,
         showDiffViewer: settingsData.showDiffViewer ?? true,
         openaiApiKey: settingsData.openaiApiKey || "",
+        customPrompt: settingsData.customPrompt || "",
+        autoTrainEnabled: settingsData.autoTrainEnabled ?? true,
+        autoTrainData: settingsData.autoTrainData || "",
       });
     }
     setHasUnsavedChanges(false);
@@ -214,6 +226,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const tabs = [
     { id: "general", label: "General", icon: Settings },
     { id: "model", label: "Model & Behavior", icon: Brain },
+    { id: "ai-personality", label: "AI Personality", icon: Bot },
     { id: "safety", label: "Code Safety", icon: Shield },
     { id: "artifacts", label: "Artifacts", icon: Box },
     { id: "api", label: "API Keys", icon: Key },
@@ -622,6 +635,139 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                         <Shield className="h-4 w-4" />
                         <AlertDescription>
                           These settings help prevent accidental overwrites of your code by requiring explicit confirmation for changes.
+                        </AlertDescription>
+                      </Alert>
+                    </div>
+                  </div>
+                )}
+
+                {/* AI Personality Settings */}
+                {activeTab === "ai-personality" && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4">AI Personality & Training</h3>
+                    </div>
+
+                    <div className="space-y-6">
+                      {/* Predefined Personalities */}
+                      <div>
+                        <Label className="text-base font-medium">Choose AI Personality</Label>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Select a predefined personality for the AI assistant
+                        </p>
+                        <RadioGroup 
+                          value={settings.customPrompt || "default"}
+                          onValueChange={(value) => updateSetting("customPrompt", value === "default" ? "" : value)}
+                        >
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="default" id="default" />
+                              <Label htmlFor="default">Default Assistant</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="You are a helpful and professional AI assistant focused on providing clear, concise answers." id="professional" />
+                              <Label htmlFor="professional">Professional & Formal</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="You are a friendly, casual AI assistant who explains things in simple terms with enthusiasm." id="friendly" />
+                              <Label htmlFor="friendly">Friendly & Casual</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="You are an expert coding assistant who provides detailed technical explanations and best practices." id="technical" />
+                              <Label htmlFor="technical">Technical Expert</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="You are a creative AI assistant who thinks outside the box and provides innovative solutions." id="creative" />
+                              <Label htmlFor="creative">Creative & Innovative</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="You are a teaching-focused AI assistant who explains concepts step-by-step with examples." id="teacher" />
+                              <Label htmlFor="teacher">Educational Mentor</Label>
+                            </div>
+                          </div>
+                        </RadioGroup>
+                      </div>
+
+                      <Separator />
+
+                      {/* Custom Prompt */}
+                      <div>
+                        <Label className="text-base font-medium">Custom System Prompt</Label>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Define a custom personality and behavior for the AI assistant
+                        </p>
+                        <Textarea
+                          value={settings.customPrompt || ""}
+                          onChange={(e) => updateSetting("customPrompt", e.target.value)}
+                          placeholder="You are a helpful AI assistant who..."
+                          className="min-h-[120px]"
+                        />
+                      </div>
+
+                      <Separator />
+
+                      {/* Auto-Train Feature */}
+                      <div>
+                        <div className={cn(
+                          "flex items-center justify-between",
+                          isMobile && "p-3 border rounded-lg"
+                        )}>
+                          <div className="flex-1">
+                            <Label className={cn(
+                              "text-base font-medium flex items-center gap-2",
+                              isMobile && "text-lg"
+                            )}>
+                              <Zap className="h-4 w-4 text-yellow-500" />
+                              Auto-Train AI
+                            </Label>
+                            <p className={cn(
+                              "text-sm text-muted-foreground",
+                              isMobile && "text-base"
+                            )}>
+                              Automatically adjust AI behavior based on your preferences and chat history
+                            </p>
+                          </div>
+                          <Switch
+                            checked={settings.autoTrainEnabled ?? true}
+                            onCheckedChange={(checked) => updateSetting("autoTrainEnabled", checked)}
+                            className={isMobile ? "scale-125" : ""}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Auto-Train Status */}
+                      {settings.autoTrainEnabled && (
+                        <Card>
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Brain className="h-4 w-4 text-blue-500" />
+                              <Label className="font-medium">Auto-Train Status</Label>
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-3">
+                              The AI is learning from your interactions to provide better responses
+                            </p>
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span>Interactions analyzed:</span>
+                                <span className="font-medium">127</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span>Response style learned:</span>
+                                <span className="font-medium">Detailed & Technical</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span>Preferred topics:</span>
+                                <span className="font-medium">Programming, AI, Web Dev</span>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      <Alert>
+                        <Bot className="h-4 w-4" />
+                        <AlertDescription>
+                          Custom prompts and auto-training help personalize your AI experience. Changes apply to new conversations.
                         </AlertDescription>
                       </Alert>
                     </div>

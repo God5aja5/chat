@@ -86,6 +86,9 @@ export const userSettings = pgTable("user_settings", {
   showLineAnnotations: boolean("show_line_annotations").default(false),
   showDiffViewer: boolean("show_diff_viewer").default(true),
   openaiApiKey: text("openai_api_key"), // encrypted
+  customPrompt: text("custom_prompt"), // Custom system prompt for AI personality
+  autoTrainEnabled: boolean("auto_train_enabled").default(true), // Auto-adjust AI based on usage
+  autoTrainData: text("auto_train_data"), // JSON string of user preferences learned
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
