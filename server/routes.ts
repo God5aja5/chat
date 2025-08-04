@@ -553,13 +553,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'Access-Control-Allow-Headers': 'Cache-Control',
       });
 
-      // Get conversation history
-      const messages = await storage.getChatMessages(currentChatId);
-      const conversationHistory = messages.map(msg => ({
-        role: msg.role as "user" | "assistant" | "system",
-        content: msg.content,
-      }));
-
       // Check if this is an image generation request
       const messageContent = content.toLowerCase();
       const isImageRequest = messageContent.includes("generate image") || 
@@ -568,6 +561,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                            messageContent.includes("make picture") ||
                            messageContent.includes("dall-e") ||
                            messageContent.includes("image of");
+
+      // Get conversation history BEFORE creating assistant message
+      const messages = await storage.getChatMessages(currentChatId);
+      const conversationHistory = messages.map(msg => ({
+        role: msg.role as "user" | "assistant" | "system",
+        content: msg.content,
+      }));
 
       let assistantResponse = "";
       

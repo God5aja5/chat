@@ -8,6 +8,13 @@ This is a complete ChatGPT clone web application built with a modern full-stack 
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes (August 2025)
+
+### Chat History Fix (August 4, 2025)
+- **Fixed Conversation Context**: Corrected message ordering in OpenAI API calls to include full conversation history
+- **Database Schema Validation**: Fixed schema validation errors in shared/schema.ts for user insert operations
+- **Message Threading**: Ensured proper sequence of message creation and history retrieval for maintaining chat context
+
 ## Recent Changes (January 2025)
 
 ### Database Migration to SQLite (August 2025)
