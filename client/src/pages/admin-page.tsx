@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { apiRequest } from '@/lib/queryClient';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import {
   Users,
   MessageSquare,
@@ -79,13 +80,13 @@ export default function AdminPage() {
   });
 
   // Fetch users
-  const { data: users = [], isLoading: usersLoading } = useQuery({
+  const { data: users = [], isLoading: usersLoading } = useQuery<any[]>({
     queryKey: ['/api/admin/users'],
     enabled: selectedTab === 'users',
   });
 
   // Fetch messages/support tickets
-  const { data: supportTickets = [], isLoading: ticketsLoading } = useQuery({
+  const { data: supportTickets = [], isLoading: ticketsLoading } = useQuery<any[]>({
     queryKey: ['/api/admin/support-tickets'],
     enabled: selectedTab === 'messages',
   });
@@ -97,7 +98,7 @@ export default function AdminPage() {
   });
 
   // Fetch redeem codes
-  const { data: redeemCodes = [], isLoading: codesLoading } = useQuery({
+  const { data: redeemCodes = [], isLoading: codesLoading } = useQuery<any[]>({
     queryKey: ['/api/admin/redeem-codes'],
     enabled: selectedTab === 'redeem-codes',
   });
@@ -109,7 +110,7 @@ export default function AdminPage() {
   });
 
   // Fetch database info
-  const { data: databaseStats, isLoading: dbLoading } = useQuery({
+  const { data: databaseStats = {}, isLoading: dbLoading } = useQuery<any>({
     queryKey: ['/api/admin/database/stats'],
     enabled: selectedTab === 'database',
   });
@@ -210,7 +211,7 @@ export default function AdminPage() {
         <CardContent>
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <UserPlus className="h-4 w-4 text-blue-500" />
+              <Users className="h-4 w-4 text-blue-500" />
               <div className="flex-1">
                 <p className="text-sm">New user registration</p>
                 <p className="text-xs text-muted-foreground">2 minutes ago</p>
@@ -245,7 +246,7 @@ export default function AdminPage() {
         </div>
         <div className="flex gap-2">
           <Button size="sm">
-            <UserPlus className="h-4 w-4 mr-2" />
+            <Users className="h-4 w-4 mr-2" />
             Add User
           </Button>
           <Button variant="outline" size="sm">
@@ -444,7 +445,7 @@ export default function AdminPage() {
                     <div>
                       <p className="font-mono font-medium">{code.code || `CODE${index + 1}`}</p>
                       <p className="text-sm text-muted-foreground">
-                        {code.planName || 'Premium'} - {code.duration || 30} days
+                        {code.plan?.name || 'Premium'} - {code.duration || 1} {code.durationType === 'months' ? 'months' : 'days'}
                       </p>
                     </div>
                   </div>
@@ -667,7 +668,7 @@ export default function AdminPage() {
                         <p className="text-sm mb-3">{ticket.message}</p>
                         <div className="flex gap-2">
                           <Button variant="outline" size="sm">
-                            <Mail className="h-4 w-4 mr-2" />
+                            <MessageSquare className="h-4 w-4 mr-2" />
                             Reply
                           </Button>
                           <Button variant="outline" size="sm">
