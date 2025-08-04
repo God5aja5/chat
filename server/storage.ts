@@ -851,7 +851,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllSubscriptions(): Promise<SubscriptionWithPlan[]> {
-    return await db
+    const result = await db
       .select({
         id: subscriptions.id,
         userId: subscriptions.userId,
@@ -865,15 +865,32 @@ export class DatabaseStorage implements IStorage {
           name: plans.name,
           price: plans.price,
           duration: plans.duration,
+          features: plans.features,
+          chatLimit: plans.chatLimit,
+          imageLimit: plans.imageLimit,
+          dailyLimit: plans.dailyLimit,
+          createdAt: plans.createdAt,
+          isActive: plans.isActive,
+        },
+        user: {
+          id: users.id,
+          email: users.email,
+          name: users.name,
+          profileImageUrl: users.profileImageUrl,
+          isAdmin: users.isAdmin,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
         },
       })
       .from(subscriptions)
       .leftJoin(plans, eq(subscriptions.planId, plans.id))
+      .leftJoin(users, eq(subscriptions.userId, users.id))
       .limit(100);
+    return result as SubscriptionWithPlan[];
   }
 
   async getAllRedeemCodes(): Promise<RedeemCodeWithPlan[]> {
-    return await db
+    const result = await db
       .select({
         id: redeemCodes.id,
         code: redeemCodes.code,
@@ -890,11 +907,28 @@ export class DatabaseStorage implements IStorage {
           name: plans.name,
           price: plans.price,
           duration: plans.duration,
+          features: plans.features,
+          chatLimit: plans.chatLimit,
+          imageLimit: plans.imageLimit,
+          dailyLimit: plans.dailyLimit,
+          createdAt: plans.createdAt,
+          isActive: plans.isActive,
+        },
+        user: {
+          id: users.id,
+          email: users.email,
+          name: users.name,
+          profileImageUrl: users.profileImageUrl,
+          isAdmin: users.isAdmin,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
         },
       })
       .from(redeemCodes)
       .leftJoin(plans, eq(redeemCodes.planId, plans.id))
+      .leftJoin(users, eq(redeemCodes.usedBy, users.id))
       .limit(100);
+    return result as RedeemCodeWithPlan[];
   }
 
   async getAllSupportTickets(): Promise<ContactMessage[]> {

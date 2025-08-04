@@ -1,0 +1,134 @@
+Bro in Admin pannle the redeem code is failed to genrate and also bro it's not showing rela info like chats mesage and bro in admin pannle we can change open ai key also add and real all things remove dummy datbs line these bro Recent Activity
+Latest system events and user actions
+New user registration
+
+2 minutes ago
+
+Premium subscription activated
+
+5 minutes ago
+
+Support ticket created
+
+12 minutes ago
+
+
+OK and make key genrating and redeeminh with correct monthsh and years and bro if use have subshvit they show they have active sysbuc expired in this and that and also bro add auto trial working 
+
+🧠 1. What is Auto Train?
+
+✅ Meaning:
+
+“Auto train” means:
+
+> Automatically adjusting or customizing the AI's behavior based on previous chats or user preferences.
+
+
+
+Even though OpenAI API cannot train models on-the-fly, you can simulate training by saving chat data and using it in the prompt.
+
+
+---
+
+💡 How to Implement "Auto Train" (Simulated)
+
+Example:
+
+If a user always asks about coding, you can "auto-train" by inserting a system prompt like:
+
+{ "role": "system", "content": "You are a coding assistant who explains JavaScript simply." }
+
+Steps to simulate "training":
+
+1. Save user preferences (e.g. topic: coding, personality: friendly)
+
+
+2. Use that info to change the system prompt every time
+
+
+
+✅ Bonus: Save their past questions and insert into prompt to simulate memory.
+
+
+---
+
+🔧 Simple Code (Auto Train Simulated)
+
+const userPreferences = {
+  style: "friendly",
+  interest: "JavaScript"
+};
+
+const autoTrainedPrompt = `You are a ${userPreferences.style} assistant that helps users learn about ${userPreferences.interest}.`;
+
+const messages = [
+  { role: "system", content: autoTrainedPrompt },
+  { role: "user", content: "Explain promises in JS" }
+];
+
+This makes it feel like the AI is “trained” on what the user likes.
+
+
+---
+
+🎨 2. What is Custom Prompt?
+
+✅ Meaning:
+
+> Letting users select the AI's personality, mood, or role by changing the system prompt.
+
+
+
+
+---
+
+🔥 Example Prompts:
+
+Name	System Prompt
+
+Teacher	“You are a strict but kind school teacher who explains slowly.”
+Hacker	“You are a dark, elite hacker who explains technology with code examples.”
+Girlfriend	“You are a sweet and supportive girlfriend who talks casually and warmly.”
+GPT Expert	“You are GPT trained on GPT prompts. Only reply with advanced prompt tricks.”
+
+
+
+---
+
+💡 How to Add Custom Prompt in Your App:
+
+1. On UI: let user choose a prompt from dropdown or buttons
+
+
+2. Save that choice (in localStorage or DB)
+
+
+3. Use it in the API like:
+
+
+
+const messages = [
+  { role: "system", content: selectedCustomPrompt },
+  { role: "user", content: userInput }
+];
+
+
+---
+
+💥 Combine Both: Auto-Train + Custom Prompt
+
+Let user:
+
+Choose a base custom prompt (e.g. “Doctor”)
+
+Auto-train from usage (e.g. user asks about heart → adjust to "Cardiologist")
+
+
+You dynamically update the system prompt like:
+
+"You are a calm, polite medical assistant specialized in cardiology."
+
+This feels like the AI "learned" the user’s interest = auto-train ✅
+
+
+User can edit these in settings bro 
