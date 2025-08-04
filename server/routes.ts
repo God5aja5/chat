@@ -607,6 +607,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             count: 1,
           });
           
+          // Send chat info if this was a new chat
+          if (!chatId) {
+            res.write(`data: ${JSON.stringify({ chatId: currentChatId, newChat: true })}\n\n`);
+          }
+          
           res.write(`data: ${JSON.stringify({ content: imageResponse, final: true })}\n\n`);
           res.write(`data: [DONE]\n\n`);
           res.end();
@@ -646,6 +651,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               type: "chat",
               count: 1,
             });
+            
+            // Send chat info if this was a new chat
+            if (!chatId) {
+              res.write(`data: ${JSON.stringify({ chatId: currentChatId, newChat: true })}\n\n`);
+            }
             
             res.write(`data: [DONE]\n\n`);
             res.end();

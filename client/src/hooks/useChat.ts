@@ -181,6 +181,19 @@ export function useChat(chatId?: string): UseChat {
                   )
                 );
               }
+              
+              // Handle new chat creation
+              if (parsed.newChat && parsed.chatId) {
+                setCurrentChat((prev) => ({ 
+                  ...prev, 
+                  id: parsed.chatId,
+                  title: "", // Will be updated when chat is refetched
+                  model: "gpt-4o",
+                  userId: "",
+                  createdAt: new Date(),
+                  updatedAt: new Date()
+                } as any));
+              }
             } catch (e) {
               // Invalid JSON, continue
             }
