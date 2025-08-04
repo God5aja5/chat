@@ -601,12 +601,16 @@ export class DatabaseStorage implements IStorage {
     await db.delete(redeemCodes).where(eq(redeemCodes.id, codeId));
   }
 
-  // Contact message operations
-  async getContactMessages(): Promise<ContactMessage[]> {
+  // Contact message operations - alias for admin panel
+  async getAllSupportTickets(): Promise<ContactMessage[]> {
     return await db
       .select()
       .from(contactMessages)
       .orderBy(desc(contactMessages.createdAt));
+  }
+
+  async getContactMessages(): Promise<ContactMessage[]> {
+    return this.getAllSupportTickets();
   }
 
   async createContactMessage(data: InsertContactMessage): Promise<ContactMessage> {
@@ -899,9 +903,23 @@ export class DatabaseStorage implements IStorage {
 
   // Enhanced redeem code generation with flexible duration
   async generateRedeemCodes(planName: string, duration: number, durationType: 'months' | 'years', count: number): Promise<RedeemCode[]> {
-    const plan = await this.getPlanByName(planName);
+    // Find or create the plan
+    let plan = await this.getPlanByName(planName);
     if (!plan) {
-      throw new Error(`Plan ${planName} not found`);
+      // Create the plan if it doesn't exist
+      const [newPlan] = await db
+        .insert(plans)
+        .values({
+          name: planName,
+          price: planName.toLowerCase() === 'premium' ? 800 : 1500, // $8 or $15
+          duration: 'monthly',
+          features: JSON.stringify(['Unlimited chats', 'Priority support', 'Advanced features']),
+          chatLimit: null,
+          imageLimit: null,
+          isActive: true,
+        })
+        .returning();
+      plan = newPlan;
     }
 
     const codes: InsertRedeemCode[] = [];

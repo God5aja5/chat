@@ -244,34 +244,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin routes with proper authentication
   const requireAdmin = async (req: any, res: any, next: any) => {
     try {
-      const authHeader = req.headers.authorization;
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ message: 'Unauthorized' });
-      }
-
-      const token = authHeader.split(' ')[1];
-      let payload;
-      try {
-        payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-      } catch (error) {
-        return res.status(401).json({ message: 'Invalid token format' });
-      }
-      
-      const user = {
-        uid: payload.user_id || payload.sub,
-        email: payload.email,
-        name: payload.name || payload.email?.split('@')[0] || 'User',
-      };
-      
-      // Check if user is admin
-      const dbUser = await storage.getUser(user.uid);
-      if (!dbUser || !dbUser.isAdmin) {
-        return res.status(403).json({ message: 'Admin access required' });
-      }
-      
-      req.user = user;
-      next();
+      // Use the same Firebase token verification as other routes
+      await verifyFirebaseToken(req, res, async () => {
+        const userId = req.user.uid;
+        
+        // Check if user is admin
+        const dbUser = await storage.getUser(userId);
+        if (!dbUser || !dbUser.isAdmin) {
+          return res.status(403).json({ message: 'Admin access required' });
+        }
+        
+        next();
+      });
     } catch (error) {
+      console.error("Admin auth error:", error);
       return res.status(401).json({ message: 'Unauthorized' });
     }
   };

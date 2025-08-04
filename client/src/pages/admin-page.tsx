@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { apiRequest } from '@/lib/queryClient';
 import {
   Users,
   MessageSquare,
@@ -39,7 +40,8 @@ import {
   CheckCircle,
   Clock,
   UserPlus,
-  Crown
+  Crown,
+  Mail
 } from 'lucide-react';
 
 interface AdminStats {
@@ -115,12 +117,7 @@ export default function AdminPage() {
   // Generate redeem codes mutation
   const generateCodesMutation = useMutation({
     mutationFn: async (data: { planName: string; duration: number; durationType: string; count: number }) => {
-      const response = await fetch('/api/admin/redeem-codes/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to generate codes');
+      const response = await apiRequest('POST', '/api/admin/redeem-codes/generate', data);
       return response.json();
     },
     onSuccess: () => {
@@ -135,11 +132,7 @@ export default function AdminPage() {
   // Remove premium mutation
   const removePremiumMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const response = await fetch(`/api/admin/users/${userId}/remove-premium`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (!response.ok) throw new Error('Failed to remove premium');
+      const response = await apiRequest('POST', `/api/admin/users/${userId}/remove-premium`);
       return response.json();
     },
     onSuccess: () => {
@@ -646,11 +639,48 @@ export default function AdminPage() {
           <TabsContent value="messages">
             <Card>
               <CardHeader>
-                <CardTitle>Support Messages</CardTitle>
+                <CardTitle>Support Messages ({supportTickets?.length || 0})</CardTitle>
                 <CardDescription>Manage customer support tickets</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground">Support ticket management interface</p>
+                {supportTickets && supportTickets.length > 0 ? (
+                  <div className="space-y-4">
+                    {supportTickets.map((ticket: any) => (
+                      <div key={ticket.id} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h4 className="font-medium">{ticket.subject}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              From: {ticket.name} ({ticket.email})
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Ticket: {ticket.ticketNumber}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Badge variant={ticket.status === 'open' ? 'destructive' : 'default'}>
+                              {ticket.status}
+                            </Badge>
+                            <Badge variant="outline">{ticket.priority}</Badge>
+                          </div>
+                        </div>
+                        <p className="text-sm mb-3">{ticket.message}</p>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm">
+                            <Mail className="h-4 w-4 mr-2" />
+                            Reply
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Mark Resolved
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">No support tickets found</p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
