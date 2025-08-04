@@ -186,7 +186,9 @@ export class DatabaseStorage implements IStorage {
       .onConflictDoUpdate({
         target: users.id,
         set: {
-          ...userData,
+          name: userData.name,
+          email: userData.email,
+          // Don't overwrite isAdmin field during upsert
           updatedAt: new Date(),
         },
       })
@@ -1047,9 +1049,7 @@ export class DatabaseStorage implements IStorage {
     return result as RedeemCodeWithPlan[];
   }
 
-  async getAllSupportTickets(): Promise<ContactMessage[]> {
-    return await db.select().from(contactMessages).limit(100);
-  }
+
 
   // Admin statistics method
   async getAdminStats(): Promise<{
